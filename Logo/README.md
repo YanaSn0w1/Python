@@ -1,6 +1,6 @@
 ## logo.py
 
-Pleaces an image in a video, renames it and changes metadata.
+Pleaces an image in a video or image file, renames it and changes metadata.
 
 The two numbers are the distance from the right and bottom edge.
 
