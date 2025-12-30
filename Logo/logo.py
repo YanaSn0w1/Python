@@ -33,8 +33,8 @@ def is_file_locked(file_path, retries=3, delay=4):
     logger.error(f"File {file_path} is locked after {retries} attempts")
     return True
 
-def get_video_resolution(video_path):
-    """Retrieve the resolution of a video using ffprobe."""
+def get_resolution(file_path):
+    """Retrieve the resolution of a video or image using ffprobe."""
     try:
         cmd = [
             'ffprobe',
@@ -42,7 +42,7 @@ def get_video_resolution(video_path):
             '-select_streams', 'v:0',
             '-show_entries', 'stream=width,height',
             '-of', 'json',
-            video_path
+            file_path
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         data = json.loads(result.stdout)
@@ -50,14 +50,14 @@ def get_video_resolution(video_path):
         height = data['streams'][0]['height']
         return width, height
     except subprocess.CalledProcessError as e:
-        logger.error(f"Error processing {video_path}: {e}")
+        logger.error(f"Error processing {file_path}: {e}")
         return None
     except (KeyError, IndexError, json.JSONDecodeError):
-        logger.error(f"Could not extract resolution from {video_path}")
+        logger.error(f"Could not extract resolution from {file_path}")
         return None
 
 def get_metadata(file_path):
-    """Extract metadata from a video file using ffprobe."""
+    """Extract metadata from a video or image file using ffprobe."""
     cmd = f'ffprobe -v quiet -print_format json -show_format -show_streams "{file_path}"'
     try:
         result = subprocess.run(
@@ -80,18 +80,22 @@ def get_metadata(file_path):
     except json.JSONDecodeError:
         return {}, "Failed to parse metadata JSON"
 
-def apply_metadata(src_path, logo_path, dest_path, metadata_dict, x_offset, y_offset):
-    """Apply metadata and watermark to the output video using ffmpeg."""
+def apply_metadata(src_path, logo_path, dest_path, metadata_dict, x_offset, y_offset, is_video):
+    """Apply metadata and watermark to the output file using ffmpeg."""
     temp_output = dest_path + f".temp_{uuid.uuid4().hex[:12]}.tmp"
     metadata_args = []
     for key, value in metadata_dict.items():
         if value:
             metadata_args.append(f'-metadata {key}="{value.replace('"', '')}"')
     metadata_cmd = " ".join(metadata_args) if metadata_args else ""
+    if is_video:
+        codec_str = '-c:v libx264 -c:a copy -f mp4'
+    else:
+        codec_str = ''
     cmd = (
         f'ffmpeg -i "{src_path}" -i "{logo_path}" '
         f'-filter_complex "overlay=main_w-overlay_w-{x_offset}:main_h-overlay_h-{y_offset}" '
-        f'-c:v libx264 -c:a copy -f mp4 -y {metadata_cmd} "{temp_output}"'
+        f'{codec_str} -y {metadata_cmd} "{temp_output}"'
     )
     try:
         subprocess.run(cmd, shell=True, check=True)
@@ -102,8 +106,8 @@ def apply_metadata(src_path, logo_path, dest_path, metadata_dict, x_offset, y_of
     except subprocess.CalledProcessError as e:
         return False, f"FFmpeg error: {str(e)}"
 
-def process_videos_in_folder(folder_path, prefix, logo_file, x_offset, y_offset, metadata=False, skipped=False):
-    """Process all .mp4 files in the folder, applying a watermark and saving to a subfolder."""
+def process_files_in_folder(folder_path, prefix, logo_file, x_offset, y_offset, metadata=False, skipped=False):
+    """Process all .mp4 videos and image files (.jpg, .jpeg, .png) in the folder, applying a watermark and saving to a subfolder."""
     abs_folder_path = os.path.abspath(folder_path).replace('/', os.sep)
     if not os.path.isdir(abs_folder_path):
         logger.error(f"Error: {abs_folder_path} is not a valid directory")
@@ -119,70 +123,82 @@ def process_videos_in_folder(folder_path, prefix, logo_file, x_offset, y_offset,
     output_folder = os.path.join(abs_folder_path, prefix)
     os.makedirs(output_folder, exist_ok=True)
 
-    # Focus on .mp4 files
-    videos = [f for f in os.listdir(abs_folder_path) if f.lower().endswith('.mp4')]
-    if not videos:
-        logger.error(f"No .mp4 files found in {abs_folder_path}")
+    # Supported extensions
+    video_extensions = ('.mp4',)
+    image_extensions = ('.jpg', '.jpeg', '.png',)
+    all_extensions = video_extensions + image_extensions
+
+    # Focus on supported files
+    files = [f for f in os.listdir(abs_folder_path) if f.lower().endswith(all_extensions)]
+    if not files:
+        logger.error(f"No supported files found in {abs_folder_path}")
         sys.exit(1)
 
     skipped_files = []
     processed_files = []
 
-    logger.info(f"Found .mp4 videos in {abs_folder_path}:")
-    for video in sorted(videos, key=lambda x: x.lower()):
-        video_path = os.path.join(abs_folder_path, video)
-        if is_file_locked(video_path):
-            skipped_files.append((video, video_path, "File is locked"))
-            logger.error(f"Skipped {video}: File is locked")
+    logger.info(f"Found media files in {abs_folder_path}:")
+    for file in sorted(files, key=lambda x: x.lower()):
+        file_path = os.path.join(abs_folder_path, file)
+        if is_file_locked(file_path):
+            skipped_files.append((file, file_path, "File is locked"))
+            logger.error(f"Skipped {file}: File is locked")
             continue
 
-        resolution = get_video_resolution(video_path)
+        resolution = get_resolution(file_path)
         if not resolution:
-            skipped_files.append((video, video_path, "Could not extract resolution"))
+            skipped_files.append((file, file_path, "Could not extract resolution"))
             continue
 
         width, height = resolution
-        logger.info(f"{video}: {width}x{height}")
+        logger.info(f"{file}: {width}x{height}")
 
         # Generate new filename with prefix
-        new_name = f"{prefix}_{os.path.splitext(video)[0]}{os.path.splitext(video)[1]}"  # Add prefix to original filename
-        output_video = os.path.join(output_folder, new_name)
+        new_name = f"{prefix}_{os.path.splitext(file)[0]}{os.path.splitext(file)[1]}"  # Add prefix to original filename
+        output_file = os.path.join(output_folder, new_name)
         counter = 1
-        while os.path.exists(output_video):
+        while os.path.exists(output_file):
             base, ext = os.path.splitext(new_name)
-            output_video = os.path.join(output_folder, f"{base}_{counter}{ext}")
+            output_file = os.path.join(output_folder, f"{base}_{counter}{ext}")
             counter += 1
+
+        # Determine if video
+        is_video = file.lower().endswith(video_extensions)
 
         # Get metadata if requested
         metadata_dict = {}
         if metadata:
-            metadata_dict, meta_error = get_metadata(video_path)
+            metadata_dict, meta_error = get_metadata(file_path)
             if meta_error:
-                logger.warning(f"Metadata extraction failed for {video}: {meta_error}")
-                skipped_files.append((video, video_path, f"Metadata extraction error: {meta_error}"))
+                logger.warning(f"Metadata extraction failed for {file}: {meta_error}")
+                skipped_files.append((file, file_path, f"Metadata extraction error: {meta_error}"))
 
-        # FFmpeg command to apply watermark
+        # Build FFmpeg command based on file type
+        if is_video:
+            codec_str = '-c:v libx264 -c:a copy -f mp4'
+        else:
+            codec_str = ''
         ffmpeg_cmd = (
-            f'ffmpeg -i "{video_path}" -i "{logo_path}" '
+            f'ffmpeg -i "{file_path}" -i "{logo_path}" '
             f'-filter_complex "overlay=main_w-overlay_w-{x_offset}:main_h-overlay_h-{y_offset}" '
-            f'-c:v libx264 -c:a copy -f mp4 "{output_video}"'
+            f'{codec_str} "{output_file}"'
         )
         logger.info(f"FFmpeg command:\n```{ffmpeg_cmd}```")
 
         # Execute FFmpeg command or apply metadata
         try:
             if metadata and metadata_dict:
-                success, error = apply_metadata(video_path, logo_path, output_video, metadata_dict, x_offset, y_offset)
+                success, error = apply_metadata(file_path, logo_path, output_file, metadata_dict, x_offset, y_offset, is_video)
                 if not success:
-                    logger.warning(f"Metadata application failed for {video}: {error}, proceeding without metadata")
+                    logger.warning(f"Metadata application failed for {file}: {error}, proceeding without metadata")
                     subprocess.run(ffmpeg_cmd, shell=True, check=True)
             else:
                 subprocess.run(ffmpeg_cmd, shell=True, check=True)
-            logger.info(f"Successfully created {output_video}")
-            processed_files.append((video, output_video))
+            logger.info(f"Successfully created {output_file}")
+            processed_files.append((file, output_file))
         except subprocess.CalledProcessError as e:
-            logger.error(f"Error executing FFmpeg for {video}: {e}")
-            skipped_files.append((video, video_path, f"FFmpeg error: {str(e)}"))
+            logger.error(f"Error executing FFmpeg for {file}: {e}")
+            skipped_files.append((file, file_path, f"FFmpeg error: {str(e)}"))
 
     # Generate skipped files report if requested
     if skipped and skipped_files:
@@ -207,18 +223,18 @@ def process_videos_in_folder(folder_path, prefix, logo_file, x_offset, y_offset,
     logger.info(f"Processed {len(processed_files)} files")
 
 def main():
-    """Parse command-line arguments and process videos."""
-    parser = argparse.ArgumentParser(description="Add a watermark to .mp4 files and rename with a prefix")
-    parser.add_argument("prefix", help="Prefix for output video filenames and output folder")
+    """Parse command-line arguments and process files."""
+    parser = argparse.ArgumentParser(description="Add a watermark to .mp4 videos and image files (.jpg, .jpeg, .png) and rename with a prefix")
+    parser.add_argument("prefix", help="Prefix for output filenames and output folder")
     parser.add_argument("logo_file", help="Name of the logo file (e.g., logo1.png) in the 'logo' subfolder")
     parser.add_argument("x_offset", type=int, help="X offset from right edge for watermark")
     parser.add_argument("y_offset", type=int, help="Y offset from bottom edge for watermark")
-    parser.add_argument("folder_path", help="Folder path containing .mp4 files")
-    parser.add_argument("--metadata", action="store_true", help="Apply metadata to output videos")
+    parser.add_argument("folder_path", help="Folder path containing files")
+    parser.add_argument("--metadata", action="store_true", help="Apply metadata to output files")
     parser.add_argument("--skipped", action="store_true", help="Generate skipped files report")
     args = parser.parse_args()
 
-    process_videos_in_folder(
+    process_files_in_folder(
         folder_path=args.folder_path,
         prefix=args.prefix,
         logo_file=args.logo_file,
