@@ -71,14 +71,15 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
 | `--rainbow` | Rainbow stars + moon |
 | `--seed` | Random seed |
 | `--output` | Output filename (default: `output.png`) |
+| `--num` | The number of random star placed picture files to create |
 
 ### Example
 
 ```bash
-python IMG.py --text "Good Evening. 👍" --br "Lets Connect. 💚" --bg_color "blueviolet" --rainbow --output GE.png
+python IMG.py --text "Good Evening. 👍" --br "Lets Connect. 💚" --bg_color "blueviolet" --rainbow --output GE.png --num 7
 ```
 
-This creates a rainbow starry image with multi-line text on a blueviolet background, saved as `GE.png` (or `GE_01.png` if it already exists).
+This creates a rainbow starry image with multi-line text on a blueviolet background, saved as `GE.png` (or `GE_01.png` if it already exists) x7.
 
 ## 📝 Notes
 - Use CSS color names (`midnightblue`, `gold`, etc.) or hex (`#001080`)
