@@ -1,18 +1,27 @@
-IMG.py - Starry Image GeneratorThis Python script generates customizable starry images with text, a crescent moon, and scattered stars. It's ideal for creating whimsical graphics like "Good Night" cards, with options for colors, rainbow effects, multi-line text, glow, and emojis.FeaturesRandomized star positions, sizes, and colors (with rainbow mode).
-Multi-line text support (main line + optional second line).
-Background, text, and star colors using CSS names or hex codes.
-Glow effect for neon-style text.
-Emoji rendering (monochrome default; color with pilmoji).
-Incremental file naming to prevent overwrites.
-Reproducible randomization via seed.
 
-RequirementsPython 3.6+
-Pillow library (pip install Pillow)
-Optional: pilmoji for color emojis (pip install pilmoji)
 
-InstallationClone the repository:bash
+# IMG.py - Starry Image Generator
 
-git clone https://github.com/<your-username>/<your-repo>.git
+This Python script generates customizable starry images with text, a crescent moon, and scattered stars. It's ideal for creating whimsical graphics like "Good Night" cards, with options for colors, rainbow effects, multi-line text, glow, and emojis.
+
+## Features
+- Randomized star positions, sizes, and colors (with rainbow mode).
+- Multi-line text support (main line + optional second line).
+- Background, text, and star colors using CSS names or hex codes.
+- Glow effect for neon-style text.
+- Emoji rendering (monochrome default; color with `pilmoji`).
+- Incremental file naming to prevent overwrites.
+- Reproducible randomization via seed.
+
+## Requirements
+- Python 3.6+
+- Pillow library (`pip install Pillow`)
+- Optional: `pilmoji` for color emojis (`pip install pilmoji`)
+
+## Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/<your-username>/<your-repo>.git
 
 Install the required Python package:bash
 
@@ -55,4 +64,5 @@ Custom fonts: Download .ttf (e.g., Pacifico from Google Fonts) and use --font_pa
 If text doesn't fit, adjust --font_size or --image_size.
 
 LicenseMIT License - see LICENSE for details.
+```
 
