@@ -75,8 +75,7 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
 ### Example
 
 ```bash
-python IMG.py --text "Good Evening" --br "Lets Connect" \
---bg_color "blueviolet" --rainbow --output GE.png
+python IMG.py --text "Good Evening" --br "Lets Connect" --bg_color "blueviolet" --rainbow --output GE.png
 ```
 
 This creates a rainbow starry image with multi-line text on a blueviolet background, saved as `GE.png` (or `GE_01.png` if it already exists).
