@@ -1,5 +1,7 @@
 # Media Processing Scripts (download.py and process.py)
 
+# [PayPal-Donations](https://www.paypal.com/donate/?hosted_button_id=9LWWH273HEVC4 "Donate to YanaHeat") ⬅️✅
+
 ## Requirements
 
 - Python 3.x: Install from https://www.python.org/downloads/
