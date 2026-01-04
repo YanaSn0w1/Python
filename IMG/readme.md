@@ -30,4 +30,3 @@ Issues?Emojis: Install pilmoji; use a emoji-friendly font.
 Colors: Check https://www.w3schools.com/colors/colors_names.asp.
 
 Free to use (MIT License).
-
