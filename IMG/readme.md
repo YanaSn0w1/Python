@@ -30,7 +30,6 @@ This Python script generates customizable starry images with text, a crescent mo
 If emoji errors occur, upgrade `pilmoji` or downgrade `emoji` to version `1.7.0`.
 
 ## 📥 Installation
-```
 
 Install dependencies:
 
