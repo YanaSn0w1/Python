@@ -14,6 +14,7 @@ This Python script generates customizable starry images with text, a crescent mo
 - Emoji rendering (monochrome default; color with `pilmoji`)
 - Incremental file naming to prevent overwrites
 - Reproducible randomization via seed
+- 
 
 ## 📦 Requirements
 - Python 3.6+
@@ -29,11 +30,6 @@ This Python script generates customizable starry images with text, a crescent mo
 If emoji errors occur, upgrade `pilmoji` or downgrade `emoji` to version `1.7.0`.
 
 ## 📥 Installation
-
-Clone your repository:
-
-```bash
-git clone https://github.com/<your-username>/<your-repo>.git
 ```
 
 Install dependencies:
@@ -76,7 +72,7 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
 ### Example
 
 ```bash
-python IMG.py --text "Good Evening. 💎" --br "Lets Connect. 🔁" --bg_color "blueviolet" --rainbow --output GE.png --num 2 --glow --image_size 1000
+python IMG.py --text "Good Evening. 💎" --br "Lets Connect. 🔁" --bg_color "blueviolet" --rainbow --output GE.png --num 7 --glow --image_size 1000
 ```
 
 This creates a rainbow starry image with multi-line text on a blueviolet background, saved as `GE.png` (or `GE_01.png` if it already exists) x7.
