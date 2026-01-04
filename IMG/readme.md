@@ -1,32 +1,58 @@
-IMG.py - Simple Image GeneratorThis script creates fun, starry images with custom text, colors, and effects. Great for quick graphics like "Good Night" cards.SetupInstall Python 3.
-Run pip install pillow for image tools.
-For color emojis: pip install pilmoji (fix any errors by upgrading or downgrading emoji to 1.7.0).
+IMG.py - Starry Image GeneratorThis Python script generates customizable starry images with text, a crescent moon, and scattered stars. It's ideal for creating whimsical graphics like "Good Night" cards, with options for colors, rainbow effects, multi-line text, glow, and emojis.FeaturesRandomized star positions, sizes, and colors (with rainbow mode).
+Multi-line text support (main line + optional second line).
+Background, text, and star colors using CSS names or hex codes.
+Glow effect for neon-style text.
+Emoji rendering (monochrome default; color with pilmoji).
+Incremental file naming to prevent overwrites.
+Reproducible randomization via seed.
 
-How to RunSave as IMG.py and use commands like these in your terminal:Basic:
+RequirementsPython 3.6+
+Pillow library (pip install Pillow)
+Optional: pilmoji for color emojis (pip install pilmoji)
 
-python IMG.py --text "Good Night" --output gn.png
+InstallationClone the repository:bash
 
-With second line and rainbow:
+git clone https://github.com/<your-username>/<your-repo>.git
 
-python IMG.py --text "Good Evening" --br "Lets Connect" --bg_color "blueviolet" --rainbow --output ge.png
+Install the required Python package:bash
 
-With emojis:
+pip install Pillow
 
-python IMG.py --text "Follow Back ✅" --br "Lets Connect 💸" --bg_color "blueviolet" --rainbow --output fb.png
+For color emojis (optional):bash
 
-Glow effect:
+pip install pilmoji
 
-python IMG.py --text "Sweet Dreams" --bg_color "orange" --glow --output dreams.png
+If errors occur with emoji dependency, upgrade pilmoji or downgrade emoji to 1.7.0.
 
-See --help for all options:
+UsageRun the script with the following command:bash
 
-python IMG.py --help
+python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] [--text_color <color>] [--star_color <color>] [--num_stars <num>] [--image_size <size>] [--font_path <path>] [--font_size <size>] [--glow] [--rainbow] [--seed <seed>] [--output <file>]
 
-TipsUse CSS colors like "black" or "#FF0000".
-For custom fonts, add --font_path "yourfont.ttf".
-Files save with numbers if name exists (e.g., gn_01.png).
+Arguments--text: Main text (default: "Good Night", required for custom).
+--br: Second line text (optional).
+--bg_color: Background color (CSS/hex, default: "dark blue").
+--text_color: Text color (CSS/hex, default: "white").
+--star_color: Star/moon color (CSS/hex, default: "orange"; ignored with --rainbow).
+--num_stars: Number of stars (default: 20).
+--image_size: Square size in pixels (default: 800).
+--font_path: Path to custom .ttf font (optional).
+--font_size: Font size (default: 100).
+--glow: Enable text glow (optional).
+--rainbow: Rainbow stars/moon (optional).
+--seed: Random seed for reproducibility (optional).
+--output: Output file (default: "output.png").
 
-Issues?Emojis: Install pilmoji; use a emoji-friendly font.
-Colors: Check https://www.w3schools.com/colors/colors_names.asp.
+Examplebash
 
-Free to use (MIT License).
+python IMG.py --text "Good Evening" --br "Lets Connect" --bg_color "blueviolet" --rainbow --output GE.png
+
+This creates a rainbow starry image with multi-line text on a blueviolet background, saved as GE.png (or GE_01.png if it exists).OutputImage saved as specified (with increment if needed).
+Console message confirming the save path.
+
+NotesUse CSS color names (e.g., "midnightblue") or hex (e.g., "#001080"). See W3Schools.
+For emojis, install pilmoji; otherwise, they may appear monochrome or as boxes.
+Custom fonts: Download .ttf (e.g., Pacifico from Google Fonts) and use --font_path.
+If text doesn't fit, adjust --font_size or --image_size.
+
+LicenseMIT License - see LICENSE for details.
+
