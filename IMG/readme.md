@@ -1,4 +1,4 @@
-# Example Commands
-## python IMG.py --text "Good Evening" --br "Lets Connect" --bg_color "blueviolet" --rainbow --output GE.png
-- Create Images with text 
+# Create Images with text 
+## Example Commands
+python IMG.py --text "Good Evening" --br "Lets Connect" --bg_color "blueviolet" --rainbow --output GE.png
 
