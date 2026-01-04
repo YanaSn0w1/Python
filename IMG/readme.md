@@ -13,8 +13,7 @@ This Python script generates customizable starry images with text, a crescent mo
 - Glow effect for neon-style text
 - Emoji rendering (monochrome default; color with `pilmoji`)
 - Incremental file naming to prevent overwrites
-- Reproducible randomization via seed
-- 
+- Reproducible randomization via seed. 
 
 ## 📦 Requirements
 - Python 3.6+
