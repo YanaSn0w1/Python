@@ -42,4 +42,3 @@ python IMG.py --help
 - Colors: Check https://www.w3schools.com/colors/colors_names.asp.
 
 Free to use (MIT License).
-
