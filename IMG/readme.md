@@ -1,4 +1,8 @@
+# [PayPal-Donations](https://www.paypal.com/donate/?hosted_button_id=9LWWH273HEVC4 "Donate to YanaHeat") ⬅️✅
+
 # IMG.py – Starry Image Generator
+
+<img width="800" height="800" alt="GE" src="https://github.com/user-attachments/assets/fb9756f4-c9c8-43f4-b5a6-b0f9b8a7ef09" />
 
 This Python script generates customizable starry images with text, a crescent moon, and scattered stars. It’s ideal for creating whimsical graphics like “Good Night” cards, with options for colors, rainbow effects, multi-line text, glow, and emojis.
 
