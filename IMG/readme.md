@@ -65,4 +65,3 @@ If text doesn't fit, adjust --font_size or --image_size.
 
 LicenseMIT License - see LICENSE for details.
 ```
-
