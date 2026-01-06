@@ -70,6 +70,11 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
 ### Example
 
 ```bash
+<img width="1200" height="1200" alt="HI_02_01" src="https://github.com/user-attachments/assets/4a181064-e6d6-48ce-93f9-3e046be2896f" />
+```
+
+
+```bash
 python IMG.py --text "Good Morning. ☀️" --br "Up & Grateful . 🙏" --bg_color "blueviolet" --rainbow --output GM.png --num 2 --glow --image_size 1000
 python IMG.py --text "Good Afternoon. 🔥" --br "Lets Connect. 💥" --bg_color "blueviolet" --rainbow --output GA.png --num 2 --glow --image_size 1000
 python IMG.py --text "Good Evening. 💎" --br "Whos Active. ✅" --bg_color "blueviolet" --rainbow --output GE.png --num 2 --glow --image_size 1000
