@@ -68,6 +68,7 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
 | `--num` | The number of random star placed picture files to create |
 
 ### Example
+
 <img width="1200" height="1200" alt="HI_02_01" src="https://github.com/user-attachments/assets/0d68fe7d-6381-4deb-84ba-ba0f4cabbd72" />
 
 ```bash
