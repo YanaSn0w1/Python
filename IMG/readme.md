@@ -70,16 +70,13 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
 ### Example
 
 <img width="1200" height="1200" alt="HI_02_01" src="https://github.com/user-attachments/assets/0d68fe7d-6381-4deb-84ba-ba0f4cabbd72" />
-
 ```bash
  python IMG.py --text "Just Say Hi. 👋" --br "Gain 100 Followers." --bg_color "darkred" --rainbow --output HI.png --num 2 --glow --image_size 1200
 ```
-<img width="1200" height="1200" alt="Hello_01_02" src="https://github.com/user-attachments/assets/7c1ef5c9-c833-4688-bede-e6ccf6299190" />
-
+<img width="1200" height="1200" alt="Hello_02_07" src="https://github.com/user-attachments/assets/8510d6a7-ea22-4274-befe-197cd38b234c" />
 ```bash
  python IMG.py --text "Say Hello 👋" --br "Let’s FollOw you 🤝" --text_color "slateblue" --bg_color "teal" --rainbow --output Hello.png --num 2 --image_size 1200
 ```
-
 ```bash
 python IMG.py --text "Good Morning. ☀️" --br "Up & Grateful . 🙏" --bg_color "blueviolet" --rainbow --output GM.png --num 2 --glow --image_size 1000
 python IMG.py --text "Good Afternoon. 🔥" --br "Lets Connect. 💥" --bg_color "blueviolet" --rainbow --output GA.png --num 2 --glow --image_size 1000
