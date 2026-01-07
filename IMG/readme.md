@@ -75,6 +75,9 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
  python IMG.py --text "Just Say Hi. 👋" --br "Gain 100 Followers." --bg_color "darkred" --rainbow --output HI.png --num 2 --glow --image_size 1200
 ```
 
+```bash
+ python IMG.py --text "Say Hello 👋" --br "Let’s FollOw you 🤝" --bg_color "teal" --rainbow --output Hello.png --num 2 --image_size 1200
+```
 
 ```bash
 python IMG.py --text "Good Morning. ☀️" --br "Up & Grateful . 🙏" --bg_color "blueviolet" --rainbow --output GM.png --num 2 --glow --image_size 1000
