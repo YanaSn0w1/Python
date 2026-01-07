@@ -4,6 +4,10 @@
 
 <img width="800" height="800" alt="GE" src="https://github.com/user-attachments/assets/fb9756f4-c9c8-43f4-b5a6-b0f9b8a7ef09" />
 
+```bash
+python IMG.py --text "Follow Back, ✅" --br "Lets Connect. 💸" --bg_color "blueviolet" --rainbow --output GE.png
+```
+
 This Python script generates customizable starry images with text, a crescent moon, and scattered stars. It’s ideal for creating whimsical graphics like “Good Night” cards, with options for colors, rainbow effects, multi-line text, glow, and emojis.
 
 ## ✨ Features
