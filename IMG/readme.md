@@ -98,7 +98,14 @@ python IMG.py --text "Follow Back, ✅" --br "Lets Connect. 💸" --bg_color "bl
 
 
 ```bash
- python IMG.py --text "Stay Safe.💎" --br "Let's Connect 💰" --text_color "blueviolet" --bg_color "chartreuse" --rainbow --output Hello.png --num 2 --image_size 1200
+ python IMG.py --text "Stay Safe. 🙏 😇" --br "Let's Connect. 💰 🚀" --text_color "blueviolet" --bg_color "chartreuse" --rainbow --output Hello.png --num 2 --image_size 1200
+```
+
+<img width="1300" height="1300" alt="Hello_01_10" src="https://github.com/user-attachments/assets/003c76a3-90e1-45b0-98b7-a9b9d926fe0f" />
+
+
+```bash
+ python IMG.py --text "Thank You God. 🌹 🙏" --br "For the Connect. 💰 💎" --text_color "gold" --bg_color "crimson" --rainbow --output Hello.png --num 2 --image_size 1300
 ```
 
 ## 📝 Notes
