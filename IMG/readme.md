@@ -94,11 +94,11 @@ python IMG.py --text "Follow Back, ✅" --br "Lets Connect. 💸" --bg_color "bl
  python IMG.py --text "Results aren't Immediate." --br "Trust the process. ✅" --text_color "crimson" --bg_color "darkblue" --rainbow --output Hello.png --num 2 --image_size 1200
 ```
 
-<img width="1200" height="1200" alt="Hello_01_01" src="https://github.com/user-attachments/assets/814057f9-3c9a-4afd-b2aa-894e7810a029" />
+<img width="1200" height="1200" alt="Hello_02_02" src="https://github.com/user-attachments/assets/6e002cd5-2862-4b88-8098-5e9b58d1c1a2" />
 
 
 ```bash
- python IMG.py --text "Stay safe.💎" --br ", lets connect 💰" --text_color "blueviolet" --bg_color "chartreuse" --rainbow --output Hello.png --num 2 --image_size 1200
+ python IMG.py --text "Stay Safe.💎" --br "Let's Connect 💰" --text_color "blueviolet" --bg_color "chartreuse" --rainbow --output Hello.png --num 2 --image_size 1200
 ```
 
 ## 📝 Notes
