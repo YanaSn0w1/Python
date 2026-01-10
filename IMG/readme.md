@@ -94,6 +94,13 @@ python IMG.py --text "Follow Back, ✅" --br "Lets Connect. 💸" --bg_color "bl
  python IMG.py --text "Results aren't Immediate." --br "Trust the process. ✅" --text_color "crimson" --bg_color "darkblue" --rainbow --output Hello.png --num 2 --image_size 1200
 ```
 
+<img width="1200" height="1200" alt="Hello_01_01" src="https://github.com/user-attachments/assets/814057f9-3c9a-4afd-b2aa-894e7810a029" />
+
+
+```bash
+ python IMG.py --text "Stay safe.💎" --br ", lets connect 💰" --text_color "blueviolet" --bg_color "chartreuse" --rainbow --output Hello.png --num 2 --image_size 1200
+```
+
 ## 📝 Notes
 - Use CSS color names (`midnightblue`, `gold`, etc.) or hex (`#001080`)
 - For color emojis, install `pilmoji`
