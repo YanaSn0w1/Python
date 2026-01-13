@@ -74,6 +74,12 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
 python IMG.py --text "Follow Back, ✅" --br "Lets Connect. 💸" --bg_color "blueviolet" --rainbow --output GE.png
 ```
 
+<img width="800" height="800" alt="Hello" src="https://github.com/user-attachments/assets/02037509-1d15-4a3d-94df-3ef4d6a8fe75" />
+
+```bash
+ python IMG.py --text "Who needs a" --br "follow back? 🔥" --bg_color "green" --rainbow --output FB.png
+```
+
 <img width="1200" height="1200" alt="HI_02_01" src="https://github.com/user-attachments/assets/0d68fe7d-6381-4deb-84ba-ba0f4cabbd72" />
 
 ```bash
