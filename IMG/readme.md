@@ -88,13 +88,11 @@ python IMG.py --text "Follow Back, ✅" --br "Lets Connect. 💸" --bg_color "bl
 
 <img width="1200" height="1200" alt="Hello_02_08" src="https://github.com/user-attachments/assets/cb06848f-9f09-43ef-bb5f-0200fb89efac" />
 
-
 ```bash
  python IMG.py --text "Say Hello 👋" --br "Let’s FollOw you 🤝" --text_color "thistle" --bg_color "teal" --rainbow --output Hello.png --num 2 --image_size 1200
 ```
 
 <img width="1200" height="1200" alt="Hello_02_09" src="https://github.com/user-attachments/assets/6fa41b98-412a-44ad-b9a3-12cf96459d37" />
-
 
 ```bash
  python IMG.py --text "Results aren't Immediate." --br "Trust the process. ✅" --text_color "crimson" --bg_color "darkblue" --rainbow --output Hello.png --num 2 --image_size 1200
@@ -102,16 +100,20 @@ python IMG.py --text "Follow Back, ✅" --br "Lets Connect. 💸" --bg_color "bl
 
 <img width="1200" height="1200" alt="Hello_02_02" src="https://github.com/user-attachments/assets/6e002cd5-2862-4b88-8098-5e9b58d1c1a2" />
 
-
 ```bash
  python IMG.py --text "Stay Safe. 🙏 😇" --br "Let's Connect. 💰 🚀" --text_color "blueviolet" --bg_color "chartreuse" --rainbow --output Hello.png --num 2 --image_size 1200
 ```
 
 <img width="1300" height="1300" alt="Hello_01_10" src="https://github.com/user-attachments/assets/003c76a3-90e1-45b0-98b7-a9b9d926fe0f" />
 
-
 ```bash
  python IMG.py --text "Thank You God. 🌹 🙏" --br "For the Connect. 💰 💎" --text_color "gold" --bg_color "crimson" --rainbow --output Hello.png --num 2 --image_size 1300
+```
+
+<img width="1200" height="1200" alt="Hi" src="https://github.com/user-attachments/assets/d61cc88f-79ba-4832-aac9-b825676ebd5a" />
+
+```bash
+ python IMG.py --text "100% Follow Back 🔙 " --br "Just retweet and reply 🔁" --text_color "cornsilk" --bg_color "cadetblue" --rainbow --output Hi.png --image_size 1200
 ```
 
 ## 📝 Notes
