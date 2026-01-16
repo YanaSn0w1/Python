@@ -135,3 +135,5 @@ python IMG.py --text "Follow Back, ✅" --br "Lets Connect. 💸" --bg_color "bl
 
 ## 📄 License
 MIT License – see `LICENSE` for details.
+
+# [PayPal-Donations](https://www.paypal.com/donate/?hosted_button_id=9LWWH273HEVC4 "Donate to YanaHeat") ⬅️✅
