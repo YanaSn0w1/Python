@@ -67,6 +67,12 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
 | `--num` | The number of random star placed picture files to create |
 
 ### Examples
+<img width="800" height="800" alt="connect" src="https://github.com/user-attachments/assets/d3e8e1a1-d40e-4cde-bb6d-aab059725df6" />
+
+```bash
+  python IMG.py --text "Lovely Evening🌹 " --br "Let's connect 🧵" --text_color "blue" --bg_color "black" --output connect.png
+```
+
 <img width="1400" height="1400" alt="Hello_03" src="https://github.com/user-attachments/assets/70cb0677-5073-4575-8653-8c951c538fce" />
 
 ```bash
