@@ -86,7 +86,7 @@ def get_video_dimensions(file_path):
 
 def extract_number(filename):
     import re
-    match = re.search(r'_(\d+)_', filename)
+    match = re.search(r'S\.0*(\d+)', filename)
     return int(match.group(1)) if match else 0
 
 def main():
@@ -129,7 +129,8 @@ def main():
     if not all_files:
         print(f"Error: No .mp4 files found in {input_dir}")
         sys.exit(1)
-    all_files.sort()  # Sort alphabetically to get the first file consistently
+    all_files.sort()  # Sort alphabetically first for stable tie-breaking
+    all_files.sort(key=extract_number)  # Then sort numerically, stable
 
     # Initialize or load existing metadata
     metadata_file = os.path.join(output_dir, "concat_metadata.json")
