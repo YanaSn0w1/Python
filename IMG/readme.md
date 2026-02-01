@@ -67,6 +67,12 @@ python IMG.py [--text <text>] [--br <second_line>] [--bg_color <color>] \
 | `--num` | The number of random star placed picture files to create |
 
 ### Examples
+<img width="1200" height="1200" alt="Hello_02_03" src="https://github.com/user-attachments/assets/dc143196-a16e-4865-aa10-b96517546c68" />
+
+```bash
+ python IMG.py --text "Need verified followers?" --br "Say Hi! We follow you! ✅" --text_color "crimson" --bg_color "darkblue" --rainbow --output Hello.png --num 2 --image_size 1200
+```
+
 <img width="800" height="800" alt="connect" src="https://github.com/user-attachments/assets/d3e8e1a1-d40e-4cde-bb6d-aab059725df6" />
 
 ```bash
