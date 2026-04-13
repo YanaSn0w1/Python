@@ -1,4 +1,4 @@
-Adds TTS subtitles and flips video
+Add TTS, subtitles and flip video.
 
 step 1: install FFmpeg (30 seconds, one command)press windows key → type “PowerShell” → right-click → “Run as administrator”
 paste this line and press Enter:
