@@ -9,6 +9,9 @@ import msvcrt
 import time
 import subprocess
 
+# Force proper UTF-8 output on Windows (prevents mojibake)
+sys.stdout.reconfigure(encoding='utf-8')
+
 OLLAMA_URL = "http://192.168.1.67:11434/api/generate"
 DEFAULT_MODEL = "llama3.1:8b"
 
@@ -18,6 +21,24 @@ COLORS = {
     "cyan": "\033[96m",
     "reset": "\033[0m"
 }
+
+def clean_text(text):
+    """Aggressively replace ALL fancy dashes/quotes with plain ASCII versions.
+    This fixes the ΓÇô / □ / mojibake issue when pasting into X/Twitter."""
+    replacements = {
+        '—': '-',   # em dash
+        '–': '-',   # en dash
+        '―': '-',   # horizontal bar
+        '‐': '-',   # hyphen
+        '‑': '-',   # non-breaking hyphen
+        '‘': "'",   # left single quote
+        '’': "'",   # right single quote
+        '“': '"',   # left double quote
+        '”': '"',   # right double quote
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text.strip()
 
 def load_history():
     if os.path.exists(HISTORY_FILE):
@@ -45,6 +66,7 @@ Rules:
 - Short. Punchy. No fluff. No long explanations.
 - Completely new topic every time
 - Plain text only. Never use **bold**, *italics*, markdown, asterisks, or any special formatting.
+- Use ONLY simple hyphen - (never em dash —, en dash –, or any fancy punctuation)
 
 Good short examples:
 - Therapy is just paid friends for people too scared to fix their shit.
@@ -70,13 +92,14 @@ Rules:
 - NEVER use overused phrases like "stop making excuses", "get to work", "you've got this", "take action"
 - Vary topics heavily: habits, identity, regret, standards, systems, discomfort, future self, small choices, self-respect, etc.
 - Plain text only. Never use **bold**, *italics*, markdown, asterisks, or any special formatting.
+- Use ONLY simple hyphen - (never em dash —, en dash –, or any fancy punctuation)
 
 Strong examples:
 - Discipline is just self-respect with a deadline.
 - Most people die at 30 and get buried at 75.
-- You don't lack motivation — you lack standards.
+- You don't lack motivation - you lack standards.
 - Comfort is the most expensive thing you'll ever buy.
-- The version of you that wins already exists — you're just late.
+- The version of you that wins already exists - you're just late.
 - Small boring actions today = unrecognizable life in two years.
 
 Recent boost lines (avoid repeating these ideas):"""
@@ -97,6 +120,7 @@ Rules:
 - Playful, bold, witty — never creepy
 - Vary topics: compliments, teasing, bold moves, tension, confidence, etc.
 - Plain text only. Never use **bold**, *italics*, markdown, asterisks, or any special formatting.
+- Use ONLY simple hyphen - (never em dash —, en dash –, or any fancy punctuation)
 
 Strong examples:
 - That smile should come with a warning label.
@@ -117,16 +141,17 @@ Tone: calm, blunt, direct, no-nonsense wisdom like Marcus Aurelius or Seneca.
 
 CRITICAL: No poetry, no metaphors, no nature imagery.
 Keep it simple, practical, grounded.
-Plain text only. Never use **bold**, *italics*, markdown, asterisks, or any special formatting."""
+Plain text only. Never use **bold**, *italics*, markdown, asterisks, or any special formatting.
+Use ONLY simple hyphen - (never em dash —, en dash –, or any fancy punctuation)"""
 
-    return "Write ONE sentence only. Tone: direct, human, grounded. Plain text only."
+    return "Write ONE sentence only. Tone: direct, human, grounded. Plain text only. Use ONLY simple hyphen -"
 
 def get_fallback(mode):
     fallbacks = {
-        "hot": ["Most people don't want freedom — they want a comfortable cage."],
+        "hot": ["Most people don't want freedom - they want a comfortable cage."],
         "boost": ["Discipline is just self-respect with a deadline."],
         "flirt": ["That smile should come with a warning label."],
-        "stoic": ["The obstacle is the way.", "You have power over your mind — not outside events."]
+        "stoic": ["The obstacle is the way.", "You have power over your mind - not outside events."]
     }
     return random.choice(fallbacks.get(mode, fallbacks["stoic"]))
 
@@ -145,7 +170,7 @@ def ai_line(mode, previous=None, model=DEFAULT_MODEL):
             r.raise_for_status()
             text = r.json().get("response", "").strip()
             if text and len(text.split()) >= 5 and len(text.split()) <= 25:
-                return text
+                return clean_text(text)   # ← clean immediately
         except:
             if attempt < 2:
                 continue
@@ -155,7 +180,6 @@ def ai_line(mode, previous=None, model=DEFAULT_MODEL):
 def generate_line(mode="hot", spiciness=2, previous=None, model=DEFAULT_MODEL):
     line = ai_line(mode, previous, model)
     
-    # All modes use the same flirt blue
     header = f"🔥 {mode.upper()} #{random.randint(1000,9999)} 🔥"
     color = COLORS['cyan']
     
@@ -166,12 +190,12 @@ def generate_line(mode="hot", spiciness=2, previous=None, model=DEFAULT_MODEL):
     return colored, line
 
 def copy_to_clipboard(text):
-    """Copy the quote to Windows clipboard using built-in 'clip' command"""
+    """Copy clean text to Windows clipboard"""
     try:
-        subprocess.run('clip', input=text.strip() + '\n', text=True, check=False)
+        subprocess.run('clip', input=text + '\n', text=True, check=False, encoding='utf-8')
         print(f"{COLORS['cyan']}📋 Copied to clipboard!{COLORS['reset']}")
     except:
-        pass  # silently fail if clip doesn't work
+        pass
 
 def infinite_wait_for_key():
     print("Press Enter for next or X to exit... ", end="", flush=True)
@@ -190,7 +214,7 @@ def infinite_wait_for_key():
         time.sleep(0.05)
 
 def main():
-    parser = argparse.ArgumentParser(description="🔥 AI QUOTE BEAST v9.4 — now copies to clipboard")
+    parser = argparse.ArgumentParser(description="🔥 AI QUOTE BEAST v9.6 — fixed ΓÇô / □ mojibake")
     parser.add_argument("-n", "--number", type=int, default=1)
     parser.add_argument("-m", "--mode", type=str, default="hot", 
                         choices=["stoic", "hot", "boost", "flirt"])
@@ -200,7 +224,7 @@ def main():
     args = parser.parse_args()
 
     print(
-        f"{COLORS['cyan']}AI QUOTE BEAST v9.4 ACTIVATED — Model: {args.model} — "
+        f"{COLORS['cyan']}AI QUOTE BEAST v9.6 ACTIVATED — Model: {args.model} — "
         f"{datetime.now().strftime('%Y-%m-%d %H:%M')}{COLORS['reset']}\n"
     )
 
@@ -212,7 +236,7 @@ def main():
             while True:
                 colored, raw = generate_line(args.mode, 2, previous, args.model)
                 print(colored)
-                copy_to_clipboard(raw)                    # ← new: auto copy
+                copy_to_clipboard(raw)
                 
                 if args.mode in ["hot", "boost", "flirt"]:
                     previous.append(raw)
@@ -224,7 +248,7 @@ def main():
             for _ in range(args.number):
                 colored, raw = generate_line(args.mode, 2, previous, args.model)
                 print(colored)
-                copy_to_clipboard(raw)                    # ← new: auto copy
+                copy_to_clipboard(raw)
                 
                 if args.mode in ["hot", "boost", "flirt"]:
                     previous.append(raw)
