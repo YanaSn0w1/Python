@@ -7,6 +7,7 @@ import json
 import os
 import msvcrt
 import time
+import subprocess
 
 OLLAMA_URL = "http://192.168.1.67:11434/api/generate"
 DEFAULT_MODEL = "llama3.1:8b"
@@ -14,10 +15,7 @@ DEFAULT_MODEL = "llama3.1:8b"
 HISTORY_FILE = "hot_takes_history.json"
 
 COLORS = {
-    "red": "\033[91m",
-    "yellow": "\033[93m",
-    "green": "\033[92m",
-    "cyan": "\033[96m",      # <-- this is the flirt blue you like
+    "cyan": "\033[96m",
     "reset": "\033[0m"
 }
 
@@ -157,9 +155,9 @@ def ai_line(mode, previous=None, model=DEFAULT_MODEL):
 def generate_line(mode="hot", spiciness=2, previous=None, model=DEFAULT_MODEL):
     line = ai_line(mode, previous, model)
     
-    # 🔥 ALL MODES NOW USE THE SAME FLIRT BLUE (cyan) — exactly what you asked for
+    # All modes use the same flirt blue
     header = f"🔥 {mode.upper()} #{random.randint(1000,9999)} 🔥"
-    color = COLORS['cyan']                    # uniform color for header + quote
+    color = COLORS['cyan']
     
     colored = (
         f"{color}{header}{COLORS['reset']}\n"
@@ -167,13 +165,20 @@ def generate_line(mode="hot", spiciness=2, previous=None, model=DEFAULT_MODEL):
     )
     return colored, line
 
+def copy_to_clipboard(text):
+    """Copy the quote to Windows clipboard using built-in 'clip' command"""
+    try:
+        subprocess.run('clip', input=text.strip() + '\n', text=True, check=False)
+        print(f"{COLORS['cyan']}📋 Copied to clipboard!{COLORS['reset']}")
+    except:
+        pass  # silently fail if clip doesn't work
+
 def infinite_wait_for_key():
-    """Wait for Enter (next) or X (exit)"""
     print("Press Enter for next or X to exit... ", end="", flush=True)
     while True:
         if msvcrt.kbhit():
             key = msvcrt.getch()
-            if key in (b'\r', b'\n'):          # Enter
+            if key in (b'\r', b'\n'):
                 print()
                 return True
             elif key.lower() == b'x':
@@ -185,31 +190,30 @@ def infinite_wait_for_key():
         time.sleep(0.05)
 
 def main():
-    parser = argparse.ArgumentParser(description="🔥 AI QUOTE BEAST v9.3 — all modes now flirt-blue")
+    parser = argparse.ArgumentParser(description="🔥 AI QUOTE BEAST v9.4 — now copies to clipboard")
     parser.add_argument("-n", "--number", type=int, default=1)
     parser.add_argument("-m", "--mode", type=str, default="hot", 
                         choices=["stoic", "hot", "boost", "flirt"])
-    parser.add_argument("-s", "--spiciness", type=int, choices=[1, 2, 3], default=2,
-                        help="Kept for future use (does nothing for color right now)")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model name")
     parser.add_argument("--infinite", action="store_true")
 
     args = parser.parse_args()
 
     print(
-        f"{COLORS['cyan']}AI QUOTE BEAST v9.3 ACTIVATED — Model: {args.model} — "
+        f"{COLORS['cyan']}AI QUOTE BEAST v9.4 ACTIVATED — Model: {args.model} — "
         f"{datetime.now().strftime('%Y-%m-%d %H:%M')}{COLORS['reset']}\n"
     )
 
-    # History for hot, boost and flirt to keep them fresh
     previous = load_history() if args.mode in ["hot", "boost", "flirt"] else []
 
     try:
         if args.infinite:
-            print("Infinite mode — Press Enter for next or press X to exit\n")
+            print("Infinite mode — Press Enter for next or X to exit\n")
             while True:
-                colored, raw = generate_line(args.mode, args.spiciness, previous, args.model)
+                colored, raw = generate_line(args.mode, 2, previous, args.model)
                 print(colored)
+                copy_to_clipboard(raw)                    # ← new: auto copy
+                
                 if args.mode in ["hot", "boost", "flirt"]:
                     previous.append(raw)
                     save_history(previous)
@@ -218,8 +222,10 @@ def main():
                     break
         else:
             for _ in range(args.number):
-                colored, raw = generate_line(args.mode, args.spiciness, previous, args.model)
+                colored, raw = generate_line(args.mode, 2, previous, args.model)
                 print(colored)
+                copy_to_clipboard(raw)                    # ← new: auto copy
+                
                 if args.mode in ["hot", "boost", "flirt"]:
                     previous.append(raw)
                     save_history(previous)
