@@ -34,9 +34,14 @@ python quote_beast.py -m stoic
 --model llama3.1:8b
 ```
 
-## Full command example
+## Full command examples
 ```bash
 python quote_beast.py -m hot -n 5
+```
+```bash
+python quote_beast.py -m hot --infinite
+```
+```bash
 python quote_beast.py -m hot --infinite --model llama3.1:8b
 ```
 
