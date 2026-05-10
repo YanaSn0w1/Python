@@ -1,5 +1,3 @@
-markdown
-
 # 🔥 AI Quote Beast
 
 **Savage local AI quotes in your terminal.**
@@ -45,5 +43,13 @@ Fully offline
 
 Made with 
 Star if it slaps.
-```
+
+**How to copy it right now:**
+1. Click and drag to highlight **all** the text inside the big box above
+2. Ctrl+C (or right-click → Copy)
+3. Go to your `README.md` file → delete everything in it → paste
+
+That’s the full thing. No halves. No extra parts. Paste it and you’re done.  
+
+Let me know if it finally worked!
 
