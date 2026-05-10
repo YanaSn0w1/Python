@@ -15,36 +15,35 @@ Powered by Ollama. No internet. Pure fire.
 ## 🚀 Quick Start
 
 ```bash
-# One hot take
+# One hot take (default)
 python quotebeast.py
 
-# Flirt infinite mode (recommended)
+# Flirt infinite mode (most fun)
 python quotebeast.py -m flirt --infinite
 
 # 5 boost quotes
 python quotebeast.py -m boost -n 5
 
+# Stoic wisdom
+python quotebeast.py -m stoic
+
  Usagebash
 
-python quotebeast.py -m [hot|boost|flirt|stoic] [--infinite]
+python quotebeast.py -m [hot|boost|flirt|stoic] [--infinite] [-n NUMBER] [--model MODEL]
 
-Controls in infinite mode:Enter → next quote
-X → exit
+Infinite mode controls:Press Enter → next quote
+Press X → exit instantly
 
 RequirementsPython 3.8+
-Ollama running locally (ollama pull llama3.1:8b)
+Ollama running locally
+Recommended: ollama pull llama3.1:8b
 
-FeaturesSmart history (no repeats)
-Clean cyan output
+FeaturesSmart history (no repeated lines)
+Clean cyan output (easy on the eyes)
 Zero markdown in quotes
-Works offline
+Fully offline
 
 Made with 
 Star if it slaps.
-
-✅ **Much smaller** — half the size, still complete and clean.
-
-Copy-paste this directly into your `README.md`. Perfect for GitHub.  
-
-Want it even shorter? Or add a screenshot line back? Just tell me.
+```
 
