@@ -16,6 +16,11 @@ AI Quote Beast is a local Python tool that generates short, punchy one‑liners 
 - `pip install requests`
 
 ## Usage
+#Start ollama in powershell
+```bash
+ollama serve
+```
+#Open new tab in powershell then use the commands
 ```bash
 python quote_beast.py -m hot
 python quote_beast.py -m boost
