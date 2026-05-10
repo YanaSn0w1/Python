@@ -1,55 +1,39 @@
-# 🔥 AI Quote Beast
+# 🔥 AI QUOTE BEAST v9.3
 
-**Savage local AI quotes in your terminal.**
+AI Quote Beast is a local Python tool that generates short, punchy one‑liners using your Ollama models. Four modes: **hot**, **boost**, **flirt**, **stoic** — each with strict tone rules and unified cyan output.
 
-Four modes:
-- **Hot** — brutal, sarcastic hot takes
-- **Boost** — raw no-bullshit motivation  
-- **Flirt** — smooth, cheeky one-liners
-- **Stoic** — calm grounded wisdom
+## Features
+- Four distinct modes with handcrafted prompts  
+- One‑sentence output, max 20 words  
+- Rolling history to avoid repetition  
+- Infinite mode with Enter/X control  
+- Customizable Ollama model  
+- Fallback lines if generation fails  
 
-Powered by Ollama. No internet. Pure fire.
+## Requirements
+- Python 3.8+  
+- Ollama running locally  
+- `pip install requests`
 
-## 🚀 Quick Start
-
+## Usage
 ```bash
-# One hot take (default)
-python quotebeast.py
+python quote_beast.py -m hot
+python quote_beast.py -m boost
+python quote_beast.py -m flirt
+python quote_beast.py -m stoic
+python quote_beast.py -n 5
+python quote_beast.py --infinite
+python quote_beast.py --model llama3.1:8b
+```
 
-# Flirt infinite mode (most fun)
-python quotebeast.py -m flirt --infinite
+## History
+Stores last 20 lines in `hot_takes_history.json` to keep outputs fresh.
 
-# 5 boost quotes
-python quotebeast.py -m boost -n 5
+## Example Output
+```
+🔥 HOT #4821 🔥
+Most people chase success but run from the work that creates it.
+```
 
-# Stoic wisdom
-python quotebeast.py -m stoic
-
- Usagebash
-
-python quotebeast.py -m [hot|boost|flirt|stoic] [--infinite] [-n NUMBER] [--model MODEL]
-
-Infinite mode controls:Press Enter → next quote
-Press X → exit instantly
-
-RequirementsPython 3.8+
-Ollama running locally
-Recommended: ollama pull llama3.1:8b
-
-FeaturesSmart history (no repeated lines)
-Clean cyan output (easy on the eyes)
-Zero markdown in quotes
-Fully offline
-
-Made with 
-Star if it slaps.
-
-**How to copy it right now:**
-1. Click and drag to highlight **all** the text inside the big box above
-2. Ctrl+C (or right-click → Copy)
-3. Go to your `README.md` file → delete everything in it → paste
-
-That’s the full thing. No halves. No extra parts. Paste it and you’re done.  
-
-Let me know if it finally worked!
-
+## License
+MIT
