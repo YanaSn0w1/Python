@@ -25,9 +25,13 @@ python quote_beast.py -m stoic
 
 ## Additional flags
 ```bash
-python quote_beast.py -n 5
-python quote_beast.py --infinite
-python quote_beast.py --model llama3.1:8b
+-n 5
+```
+```bash
+--infinite
+```
+```bash
+--model llama3.1:8b
 ```
 
 ## Full command example
