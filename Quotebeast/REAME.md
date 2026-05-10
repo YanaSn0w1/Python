@@ -1,4 +1,4 @@
-# 🔥 AI QUOTE BEAST v9.4
+# 🔥 AI QUOTE BEAST v9.6
 
 AI Quote Beast is a local Python tool that generates short, punchy one‑liners using your Ollama models. Four modes: **hot**, **boost**, **flirt**, **stoic** — each with strict tone rules and unified cyan output.
 
