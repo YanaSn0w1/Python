@@ -15,43 +15,70 @@ sys.stdout.reconfigure(encoding='utf-8')
 OLLAMA_URL = "http://192.168.1.67:11434/api/generate"
 DEFAULT_MODEL = "llama3.1:8b"
 
-HISTORY_FILE = "hot_takes_history.json"
+HISTORY_FILE = "quote_beast_history.json"
+MAX_HISTORY = 100   # ← sensible limit so the file never gets huge
 
 COLORS = {
-    "cyan": "\033[96m",
-    "reset": "\033[0m"
+    "header": "\033[96m",     # Cyan for the 🔥 header
+    "text":   "\033[97m",     # Bright White - easy to read on black
+    "reset":  "\033[0m"
 }
 
 def clean_text(text):
-    """Aggressively replace ALL fancy dashes/quotes with plain ASCII versions.
-    This fixes the ΓÇô / □ / mojibake issue when pasting into X/Twitter."""
+    """Aggressively replace ALL fancy dashes/quotes with plain ASCII versions."""
     replacements = {
-        '—': '-',   # em dash
-        '–': '-',   # en dash
-        '―': '-',   # horizontal bar
-        '‐': '-',   # hyphen
-        '‑': '-',   # non-breaking hyphen
-        '‘': "'",   # left single quote
-        '’': "'",   # right single quote
-        '“': '"',   # left double quote
-        '”': '"',   # right double quote
+        '—': '-', '–': '-', '―': '-', '‐': '-', '‑': '-',
+        '‘': "'", '’': "'", '“': '"', '”': '"',
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
     return text.strip()
 
 def load_history():
+    """Load history (new format: list of dicts). Returns only the quotes (strings) for the prompt.
+    Backward compatible with old string-only history files."""
     if os.path.exists(HISTORY_FILE):
         try:
             with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)[-20:]
+                data = json.load(f)
+            
+            if isinstance(data, list) and data:
+                # New format: [{"mode": "...", "quote": "..."}, ...]
+                if isinstance(data[0], dict):
+                    return [entry["quote"] for entry in data[-MAX_HISTORY:]]
+                # Old format: just list of strings
+                else:
+                    return data[-MAX_HISTORY:]
         except:
-            return []
+            pass
     return []
 
-def save_history(history):
+def save_history(history_list, mode, raw_quote):
+    """Append new quote with its mode and keep only the last MAX_HISTORY entries."""
+    # Build new entry
+    entry = {"mode": mode, "quote": raw_quote}
+    
+    # Load existing (or start fresh)
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                data = []
+        except:
+            data = []
+    else:
+        data = []
+    
+    # Append new one
+    data.append(entry)
+    
+    # Trim to MAX_HISTORY
+    data = data[-MAX_HISTORY:]
+    
+    # Save pretty-printed (one entry per line, easy to read)
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(history, f)
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 def build_prompt(mode, previous=None):
     if mode == "hot":
@@ -170,22 +197,21 @@ def ai_line(mode, previous=None, model=DEFAULT_MODEL):
             r.raise_for_status()
             text = r.json().get("response", "").strip()
             if text and len(text.split()) >= 5 and len(text.split()) <= 25:
-                return clean_text(text)   # ← clean immediately
+                return clean_text(text)
         except:
             if attempt < 2:
                 continue
     print(f"⚠️  Ollama failed after 3 tries, using fallback...")
     return get_fallback(mode)
 
-def generate_line(mode="hot", spiciness=2, previous=None, model=DEFAULT_MODEL):
+def generate_line(mode="hot", previous=None, model=DEFAULT_MODEL):
     line = ai_line(mode, previous, model)
     
     header = f"🔥 {mode.upper()} #{random.randint(1000,9999)} 🔥"
-    color = COLORS['cyan']
     
     colored = (
-        f"{color}{header}{COLORS['reset']}\n"
-        f"{color}{line}{COLORS['reset']}\n"
+        f"{COLORS['header']}{header}{COLORS['reset']}\n"
+        f"{COLORS['text']}{line}{COLORS['reset']}\n"
     )
     return colored, line
 
@@ -193,7 +219,7 @@ def copy_to_clipboard(text):
     """Copy clean text to Windows clipboard"""
     try:
         subprocess.run('clip', input=text + '\n', text=True, check=False, encoding='utf-8')
-        print(f"{COLORS['cyan']}📋 Copied to clipboard!{COLORS['reset']}")
+        print(f"{COLORS['text']}📋 Copied to clipboard!{COLORS['reset']}")
     except:
         pass
 
@@ -214,7 +240,7 @@ def infinite_wait_for_key():
         time.sleep(0.05)
 
 def main():
-    parser = argparse.ArgumentParser(description="🔥 AI QUOTE BEAST v9.6 — fixed ΓÇô / □ mojibake")
+    parser = argparse.ArgumentParser(description="🔥 AI QUOTE BEAST v9.8 — quote_beast_history.json + mode tracking")
     parser.add_argument("-n", "--number", type=int, default=1)
     parser.add_argument("-m", "--mode", type=str, default="hot", 
                         choices=["stoic", "hot", "boost", "flirt"])
@@ -224,37 +250,38 @@ def main():
     args = parser.parse_args()
 
     print(
-        f"{COLORS['cyan']}AI QUOTE BEAST v9.6 ACTIVATED — Model: {args.model} — "
+        f"{COLORS['header']}AI QUOTE BEAST v9.8 ACTIVATED — Model: {args.model} — "
         f"{datetime.now().strftime('%Y-%m-%d %H:%M')}{COLORS['reset']}\n"
     )
 
+    # Only hot/boost/flirt use history
     previous = load_history() if args.mode in ["hot", "boost", "flirt"] else []
 
     try:
         if args.infinite:
             print("Infinite mode — Press Enter for next or X to exit\n")
             while True:
-                colored, raw = generate_line(args.mode, 2, previous, args.model)
+                colored, raw = generate_line(args.mode, previous, args.model)
                 print(colored)
                 copy_to_clipboard(raw)
                 
                 if args.mode in ["hot", "boost", "flirt"]:
-                    previous.append(raw)
-                    save_history(previous)
+                    previous.append(raw)                    # for next prompt
+                    save_history(previous, args.mode, raw)  # saves with mode + trims
                 
                 if not infinite_wait_for_key():
                     break
         else:
             for _ in range(args.number):
-                colored, raw = generate_line(args.mode, 2, previous, args.model)
+                colored, raw = generate_line(args.mode, previous, args.model)
                 print(colored)
                 copy_to_clipboard(raw)
                 
                 if args.mode in ["hot", "boost", "flirt"]:
                     previous.append(raw)
-                    save_history(previous)
+                    save_history(previous, args.mode, raw)
     except KeyboardInterrupt:
-        print(f"\n{COLORS['cyan']}Stopped.{COLORS['reset']}")
+        print(f"\n{COLORS['header']}Stopped.{COLORS['reset']}")
         sys.exit(0)
 
 if __name__ == "__main__":
