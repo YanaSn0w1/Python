@@ -10,6 +10,7 @@ AI Quote Beast is a local Python tool that generates short, punchy one‑liners 
 - Customizable Ollama model  
 - Fallback lines if generation fails
 - Saves each quote to clipboard
+- Saves last 100 to quote_beast_history.json in the user folder
 
 ## Requirements
 - Python 3.8+  
