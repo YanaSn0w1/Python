@@ -52,9 +52,6 @@ python quote_beast.py -m hot --infinite
 python quote_beast.py -m hot --infinite --model llama3.1:8b
 ```
 
-## History
-Stores last 20 lines in `hot_takes_history.json` to keep outputs fresh.
-
 ## Example Output
 ```
 🔥 HOT #4821 🔥
