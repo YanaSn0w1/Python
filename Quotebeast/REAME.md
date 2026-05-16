@@ -1,4 +1,4 @@
-# 🔥 AI QUOTE BEAST v9.8
+# 🔥 AI QUOTE BEAST v9.9
 
 AI Quote Beast is a local Python tool that generates short, punchy one‑liners using your Ollama models. Four modes: **hot**, **boost**, **flirt**, **stoic** — each with strict tone rules and unified.
 
@@ -11,6 +11,8 @@ AI Quote Beast is a local Python tool that generates short, punchy one‑liners 
 - Fallback lines if generation fails
 - Saves each quote to clipboard
 - Saves last 100 to quote_beast_history.json in the user folder
+- Copy something → run the script → it reacts to what you copied.
+- Resets to default after every generation (as long as you don’t copy new text first)
 
 ## Requirements
 - Python 3.8+  
