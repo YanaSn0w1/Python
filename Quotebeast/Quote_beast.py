@@ -3,7 +3,6 @@ import argparse
 import sys
 from datetime import datetime
 import requests
-import json
 import os
 import subprocess
 
@@ -22,9 +21,16 @@ COLORS = {
 }
 
 def get_clipboard():
+    """Fixed: now handles any weird clipboard encoding without crashing"""
     try:
-        result = subprocess.run(['powershell', '-Command', 'Get-Clipboard'], 
-                              capture_output=True, text=True, encoding='utf-8', timeout=2)
+        result = subprocess.run(
+            ['powershell', '-Command', 'Get-Clipboard'],
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',      # ← THIS FIXES THE UnicodeDecodeError
+            timeout=2
+        )
         return result.stdout.strip()
     except:
         return ""
@@ -33,6 +39,17 @@ def clean_text(text):
     replacements = {'—': '-', '–': '-', '―': '-', '‐': '-', '‑': '-', '‘': "'", '’': "'", '“': '"', '”': '"'}
     for old, new in replacements.items():
         text = text.replace(old, new)
+    
+    text = text.strip()
+    
+    if len(text) > 2:
+        if (text.startswith('"') and text.endswith('"')) or \
+           (text.startswith("'") and text.endswith("'")) or \
+           (text.startswith('“') and text.endswith('”')) or \
+           (text.startswith('‘') and text.endswith('’')):
+            text = text[1:-1].strip()
+    
+    text = text.strip('"\'“”‘’')
     text = text.lstrip(' -–—•*#0123456789').strip()
     return text
 
@@ -70,66 +87,74 @@ def save_last_ai_quote(text):
 
 def build_prompt(mode, comment_context=""):
     if comment_context:
-        context = f"\n\nPrevious quote (react to it directly): \"{comment_context}\""
+        context = f"\n\nPrevious message you're replying to (react directly to it): {comment_context}"
     else:
         context = ""
 
     if mode == "hot":
         prompt = """You are AI Quote Beast — the most savage hot take generator alive.
 
-Write **EXACTLY ONE very short sentence**. Maximum 20 words.
+Write EXACTLY ONE very short sentence. Maximum 20 words.
 
 Brutal, sarcastic, irreverent. Casual internet language, swearing allowed.
 
-Rules:
-- Boldly contradict a common belief
-- Short. Punchy. No fluff.
-- Completely new topic every time
+CRITICAL VARIETY RULES (MANDATORY):
+- Every generation MUST use a COMPLETELY FRESH topic.
+- NEVER repeat themes like cats, animals secretly ruling the world, pet conspiracies, litter boxes, or similar.
+- Boldly contradict a common belief or take a sharp, unexpected angle on society, tech, relationships, work, human behavior, or daily life.
+- Short. Punchy. No fluff. Surprise the reader.
 - Plain text only. Never use **bold**, *italics*, markdown, asterisks.
 - Use ONLY simple hyphen - 
-- Never start the sentence with a dash or hyphen. Begin directly with the words."""
+- Never start the sentence with a dash or hyphen. Begin directly with the words.
+- Output ONLY the raw sentence. Do NOT wrap it in quotation marks or add any extra text."""
 
     elif mode == "boost":
-        prompt = """You are a no-bullshit motivation machine.
+        prompt = """You are a direct, motivational speaker.
 
-Write **EXACTLY ONE very short sentence**. Maximum 20 words.
+Write EXACTLY ONE very short sentence. Maximum 20 words.
 
-Tone: grounded, direct, tough-love, raw.
+Tone: honest and grounded. Be direct without judgment, shaming, or sounding preachy.
 
 Rules:
-- Be original every single time
-- NEVER use overused phrases
-- Vary topics heavily
+- Never imply the person is doing something wrong or needs to "fix themselves".
+- Focus on a clear perspective or simple truth — not advice that feels like a lecture.
+- Avoid any language that sounds condescending or like tough-love scolding.
+- Be original every time. Vary topics heavily.
 - Plain text only. Never use **bold**, *italics*, markdown, asterisks.
 - Use ONLY simple hyphen - 
-- Never start the sentence with a dash or hyphen. Begin directly with the words."""
+- Never start the sentence with a dash or hyphen. Begin directly with the words.
+- Output ONLY the raw sentence. Do NOT wrap it in quotation marks."""
 
     elif mode == "flirt":
         prompt = """You are AI Flirt Beast — master of smooth, playful one-liners.
 
-Write **EXACTLY ONE very short sentence**. Maximum 20 words.
+Write EXACTLY ONE very short sentence. Maximum 20 words.
 
 Tone: cheeky, confident, teasing, seductive but classy.
 
 Rules:
-- Be original every single time
-- Playful, bold, witty — never creepy
+- Be original every single time.
+- Playful, bold, witty — never creepy.
 - Plain text only. Never use **bold**, *italics*, markdown, asterisks.
 - Use ONLY simple hyphen - 
-- Never start the sentence with a dash or hyphen. Begin directly with the words."""
+- Never start the sentence with a dash or hyphen. Begin directly with the words.
+- Output ONLY the raw sentence. Do NOT wrap it in quotation marks or add any extra text."""
 
     elif mode == "stoic":
         prompt = """Write EXACTLY ONE short sentence only.
 Tone: calm, blunt, direct, no-nonsense wisdom like Marcus Aurelius or Seneca.
 
 CRITICAL: No poetry, no metaphors, no nature imagery, no art, no garden, no creative references, no self-help talk about effort or excuses.
-Keep it simple, practical, grounded.
+Keep it simple, practical, grounded. Vary the angle every time.
 Plain text only. Never use **bold**, *italics*, markdown, asterisks.
 Use ONLY simple hyphen - 
-Never start the sentence with a dash or hyphen. Begin directly with the words."""
+Never start the sentence with a dash or hyphen. Begin directly with the words.
+Output ONLY the raw sentence. Do NOT wrap it in quotation marks or add any extra text."""
 
     else:
-        prompt = """Write ONE sentence only. Tone: direct, human, grounded. Plain text only. Use ONLY simple hyphen -"""
+        prompt = """Write ONE sentence only. Tone: direct, human, grounded. 
+Plain text only. Use ONLY simple hyphen - 
+Output ONLY the raw sentence. Do NOT wrap it in quotation marks or add any extra text."""
 
     prompt += context
     prompt += "\n\nYour reply:"
@@ -153,8 +178,9 @@ def ai_line(mode, comment_context="", model=DEFAULT_MODEL):
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-                "temperature": 1.65,
-                "repeat_penalty": 1.9,
+                "temperature": 1.4,
+                "repeat_penalty": 2.0,
+                "top_p": 0.9
             }, timeout=60)
             r.raise_for_status()
             text = r.json().get("response", "").strip()
@@ -181,6 +207,7 @@ def copy_to_clipboard(text):
 def main():
     parser = argparse.ArgumentParser(description="🔥 AI QUOTE BEAST")
     parser.add_argument("-m", "--mode", type=str, default=None, choices=["stoic", "hot", "boost", "flirt"])
+    parser.add_argument("-n", "--number", type=int, default=1, help="Number of quotes to generate in a row")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("-l", "--last", action="store_true")
     parser.add_argument("--blind", action="store_true", help="Ignore clipboard and generate blind quote")
@@ -192,24 +219,32 @@ def main():
 
     save_last_mode(args.mode)
 
-    print(f"{COLORS['header']}AI QUOTE BEAST v9.9 ACTIVATED — Mode: {args.mode} — Model: {args.model} — {datetime.now().strftime('%Y-%m-%d %H:%M')}{COLORS['reset']}\n")
+    print(f"{COLORS['header']}AI QUOTE BEAST v12 — Mode: {args.mode} — Model: {args.model} — {datetime.now().strftime('%Y-%m-%d %H:%M')}{COLORS['reset']}\n")
 
-    # === SMART CLIPBOARD LOGIC ===
     clipboard_text = get_clipboard().strip()
     last_ai = get_last_ai_quote()
 
-    # If clipboard is our own previous quote → treat as blind (fresh)
-    if clipboard_text == last_ai or args.blind or not clipboard_text:
+    # Use clipboard context ONLY for the very first quote (if applicable)
+    if clipboard_text == last_ai or args.blind or not clipboard_text or args.number > 1:
         comment_context = ""
     else:
         comment_context = clipboard_text
 
-    colored, raw = generate_line(args.mode, comment_context, args.model)
-    print(colored)
+    num_quotes = max(1, args.number)
     
-    if raw:
-        copy_to_clipboard(raw)
-        save_last_ai_quote(raw)   # remember what we just made
+    for i in range(num_quotes):
+        # Clean output — no heavy separators, just a blank line between quotes
+        if i > 0:
+            print()
+        
+        current_context = comment_context if i == 0 else ""
+        colored, raw = generate_line(args.mode, current_context, args.model)
+        print(colored)
+        
+        # Only the FINAL quote gets copied + saved
+        if raw and i == num_quotes - 1:
+            copy_to_clipboard(raw)
+            save_last_ai_quote(raw)
 
 if __name__ == "__main__":
     main()
