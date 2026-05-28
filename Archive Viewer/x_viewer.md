@@ -1,3 +1,5 @@
+# [PayPal-Donations](https://www.paypal.com/donate/?hosted_button_id=9LWWH273HEVC4 "Donate to YanaHeat") ⬅️
+
 # 🔍 My X Archive Viewer
 
 A compact Streamlit app that loads your **Twitter/X archive ZIP**, classifies every post, and lets you **filter, search, sort, and export** everything fast.
@@ -26,6 +28,7 @@ streamlit run x_viewer.py
 2. In the app, type **Downloads** or paste the ZIP path (does this automatically)
 3. Apply filters in the sidebar
 4. Export or copy URLs
+5. Delete posts (Optional) [X Bulk Deleter](https://github.com/YanaSn0w1/Tampermonkey/blob/main/%F0%9D%95%8F-Twitter/X%20Bulk%20Deleter.user.js "X Bulk Deleter") ⬅️
 
 ## 🧠 How It Works
 - Loads all `data/tweets/*.js` files
