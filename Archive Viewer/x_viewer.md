@@ -45,7 +45,9 @@ streamlit run x_viewer.py
 - **CSV** — full dataset  
 - **JSON** — structured records  
 - **TXT** — simple list  
-- **HTML** — clickable links  
+- **HTML** — clickable links
+
+  <img width="1600" height="852" alt="firefox_2q4Qkr3pKw" src="https://github.com/user-attachments/assets/13d9b1fe-4a19-433e-92a2-903e159ea5df" />
 
 ## 📄 License
 MIT
