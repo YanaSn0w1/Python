@@ -1,6 +1,6 @@
 # [PayPal-Donations](https://www.paypal.com/donate/?hosted_button_id=9LWWH273HEVC4 "Donate to YanaHeat") ⬅️
 
-# 🔍 My X Archive Viewer
+# 🔍 X Archive Viewer
 
 A compact Streamlit app that loads your **Twitter/X archive ZIP**, classifies every post, and lets you **filter, search, sort, and export** everything fast.
 
