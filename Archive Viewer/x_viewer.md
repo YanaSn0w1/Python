@@ -28,7 +28,7 @@ streamlit run x_viewer.py
 2. In the app, type **Downloads** or paste the ZIP path (does this automatically)
 3. Apply filters in the sidebar
 4. Export or copy URLs
-5. Delete the posts (Optional) [X Bulk Deleter](https://github.com/YanaSn0w1/Tampermonkey#x-bulk-deleter-%EF%B8%8F "X Bulk Deleter") ⬅️
+5. Delete the posts with tampermonkey (Optional) [X Bulk Deleter](https://github.com/YanaSn0w1/Tampermonkey#x-bulk-deleter-%EF%B8%8F "X Bulk Deleter") ⬅️
 
 ## 🧠 How It Works
 - Loads all `data/tweets/*.js` files
