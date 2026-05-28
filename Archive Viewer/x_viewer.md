@@ -18,7 +18,7 @@ pip install streamlit pandas
 
 ## ▶️ Run
 ```bash
-streamlit run app.py
+streamlit run x_viewer.py
 ```
 
 ## 📁 How to Use
