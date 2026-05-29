@@ -28,7 +28,7 @@ streamlit run x_viewer.py
 ```
 3. Apply filters in the sidebar
 4. Export or copy URLs
-5. Delete the posts with [X Bulk Deleter](https://github.com/YanaSn0w1/Tampermonkey#x-bulk-deleter-%EF%B8%8F "X Bulk Deleter") ⬅️
+5. Load the JSON with [X Bulk Deleter](https://github.com/YanaSn0w1/Tampermonkey#x-bulk-deleter-%EF%B8%8F "X Bulk Deleter") ⬅️
 
 ## 🧠 How It Works
 - Loads all `data/tweets/*.js` files
