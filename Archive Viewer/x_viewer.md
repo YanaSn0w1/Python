@@ -21,7 +21,7 @@ pip install streamlit pandas
 ## 
 
 ## 📁 How to Use
-1. Download your X archive (`twitter-*.zip`)
+1. Download your X archive to your Downloads folder (`twitter-*.zip`)
 2. In powershell Run
 ```bash
 streamlit run x_viewer.py
