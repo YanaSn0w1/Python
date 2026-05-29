@@ -18,14 +18,14 @@ A compact Streamlit app that loads your **Twitter/X archive ZIP**, classifies ev
 pip install streamlit pandas
 ```
 
-## ▶️ Run
-```bash
-streamlit run x_viewer.py
-```
+## 
 
 ## 📁 How to Use
 1. Download your X archive (`twitter-*.zip`)
-2. In the app, type **Downloads** or paste the ZIP path (does this automatically)
+2. ▶️ Run
+```bash
+streamlit run x_viewer.py
+```
 3. Apply filters in the sidebar
 4. Export or copy URLs
 5. Delete the posts with [X Bulk Deleter](https://github.com/YanaSn0w1/Tampermonkey#x-bulk-deleter-%EF%B8%8F "X Bulk Deleter") ⬅️
