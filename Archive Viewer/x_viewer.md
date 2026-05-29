@@ -47,7 +47,7 @@ streamlit run x_viewer.py
 - **TXT** — simple list  
 - **HTML** — clickable links
 
-  <img width="1600" height="852" alt="firefox_2q4Qkr3pKw" src="https://github.com/user-attachments/assets/13d9b1fe-4a19-433e-92a2-903e159ea5df" />
+  <img width="1600" height="900" alt="firefox_hXeYcu4gk0" src="https://github.com/user-attachments/assets/17ff8f9a-56eb-48ee-b31b-f9a4fa96cb08" />
 
 ## 📄 License
 MIT
