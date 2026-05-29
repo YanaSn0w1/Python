@@ -4,12 +4,13 @@ import json
 import os
 import re
 import zipfile
+import io
 from pathlib import Path
 
 st.set_page_config(page_title="My X Archive Viewer", layout="wide")
 st.title("🔍 My X Archive Viewer")
 
-# ====================== CLEAN PATH INPUT ======================
+# ====================== ZIP LOADING ======================
 st.text_input("Path to zip file (or type 'Downloads')", value="Downloads", key="zip_path_input")
 zip_input = st.session_state.zip_path_input
 
@@ -150,14 +151,17 @@ else:
     export_df["Date"] = export_df["date"].dt.strftime("%Y-%m-%d %H:%M")
     export_columns = ["Date", "Type", "text", "url"]
 
-    # Export Options
+    # ====================== EXPORT OPTIONS ======================
     st.markdown("### 📥 Export Options")
+
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         st.download_button("📄 CSV", export_df[export_columns].to_csv(index=False), "x_archive_links.csv", "text/csv")
     with col2:
-        st.download_button("📦 JSON", export_df[export_columns].to_json(orient="records", indent=2), "x_archive_links.json", "application/json")
+        st.download_button("📦 JSON (Single File)", 
+                           export_df[export_columns].to_json(orient="records", indent=2), 
+                           "x_archive_links.json", "application/json")
     with col3:
         txt = "\n".join(export_df.apply(lambda r: f"{r['Date']} | {r['Type']} | {r['url']}", axis=1))
         st.download_button("📝 TXT", txt, "x_archive_links.txt", "text/plain")
@@ -165,7 +169,63 @@ else:
         html = "<br>".join([f"<a href='{u}' target='_blank'>{d} | {t} | {u}</a>" for d, t, u in zip(export_df['Date'], export_df['Type'], export_df['url'])])
         st.download_button("🌐 HTML", f"<html><body>{html}</body></html>", "x_archive_links.html", "text/html")
 
-    # Copy button
+    # ====================== SPLIT JSON WITH ZIP ======================
+    st.markdown("---")
+    st.markdown("### 📦 Split JSON (Best for X Bulk Deleter)")
+
+    col_split1, col_split2, col_split3 = st.columns([1.3, 1.3, 2.4])
+
+    with col_split1:
+        chunk_size = st.number_input(
+            "Items per file", 
+            min_value=1000, 
+            max_value=20000, 
+            value=8000, 
+            step=1000,
+            help="Higher = fewer files. Try 8000–12000 for big archives."
+        )
+
+    with col_split2:
+        create_zip = st.checkbox("Download as one ZIP file", value=True)
+
+    with col_split3:
+        if st.button("Generate Split JSON Files", type="primary"):
+            if len(export_df) == 0:
+                st.warning("No data to export.")
+            else:
+                chunks = [export_df[i:i + chunk_size] for i in range(0, len(export_df), chunk_size)]
+                st.success(f"Created {len(chunks)} part(s)")
+
+                if create_zip:
+                    # Create one ZIP containing all parts
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                        for idx, chunk in enumerate(chunks, 1):
+                            json_str = chunk[export_columns].to_json(orient="records", indent=2)
+                            filename = f"x_archive_part{idx}_of_{len(chunks)}.json"
+                            zip_file.writestr(filename, json_str)
+                    
+                    zip_buffer.seek(0)
+                    st.download_button(
+                        label=f"📦 Download All as ZIP ({len(chunks)} files)",
+                        data=zip_buffer,
+                        file_name="x_archive_split_json.zip",
+                        mime="application/zip"
+                    )
+                else:
+                    # Show individual download buttons
+                    for idx, chunk in enumerate(chunks, 1):
+                        json_str = chunk[export_columns].to_json(orient="records", indent=2)
+                        filename = f"x_archive_part{idx}_of_{len(chunks)}.json"
+                        st.download_button(
+                            label=f"⬇️ {filename} ({len(chunk):,} items)",
+                            data=json_str,
+                            file_name=filename,
+                            mime="application/json",
+                            key=f"split_{idx}"
+                        )
+
+    # ====================== TABLE ======================
     if len(filtered) <= 1000:
         if st.button("📋 Copy URLs to Clipboard"):
             st.session_state.visible_urls = "\n".join(export_df["url"].tolist())
@@ -175,7 +235,6 @@ else:
     else:
         st.caption("Copy hidden for large results. Use downloads above.")
 
-    # Table
     display_df = export_df[["Date", "Type", "has_any_link", "text", "url"]].copy()
     display_df.columns = ["Date", "Type", "Has Link", "Text", "Open on X"]
     st.dataframe(display_df, use_container_width=True, hide_index=True)
