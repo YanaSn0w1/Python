@@ -1,4 +1,6 @@
-# 🔥 AI QUOTE BEAST v9.9
+# 🔥 QUOTE BEAST
+
+# Use with [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") ⬅️
 
 AI Quote Beast is a local Python tool that generates short, punchy one‑liners using your Ollama models. Four modes: **hot**, **boost**, **flirt**, **stoic** — each with strict tone rules and unified.
 
