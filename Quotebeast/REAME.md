@@ -1,4 +1,4 @@
-# 🔥 QUOTE BEAST
+# [Quote_beast.py](https://github.com/YanaSn0w1/Python/blob/main/Quotebeast/Quote_beast.py "Quote_beast.py") ⬅️
 
 # Use with [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") ⬅️
 
