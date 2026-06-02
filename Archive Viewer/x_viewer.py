@@ -169,7 +169,7 @@ else:
         html = "<br>".join([f"<a href='{u}' target='_blank'>{d} | {t} | {u}</a>" for d, t, u in zip(export_df['Date'], export_df['Type'], export_df['url'])])
         st.download_button("🌐 HTML", f"<html><body>{html}</body></html>", "x_archive_links.html", "text/html")
 
-    # ====================== SPLIT JSON WITH ZIP ======================
+    # ====================== SPLIT JSON WITH INDEX (UPDATED) ======================
     st.markdown("---")
     st.markdown("### 📦 Split JSON (Best for X Bulk Deleter)")
 
@@ -193,32 +193,45 @@ else:
             if len(export_df) == 0:
                 st.warning("No data to export.")
             else:
-                chunks = [export_df[i:i + chunk_size] for i in range(0, len(export_df), chunk_size)]
-                st.success(f"Created {len(chunks)} part(s)")
+                # === ADD GLOBAL INDEX ===
+                export_df_indexed = export_df.reset_index(drop=True).copy()
+                export_df_indexed["index"] = export_df_indexed.index   # Global index starting from 0
+
+                export_columns_with_index = ["index"] + export_columns
+
+                chunks = [
+                    export_df_indexed[i:i + chunk_size] 
+                    for i in range(0, len(export_df_indexed), chunk_size)
+                ]
+                st.success(f"Created {len(chunks)} part(s) with global index")
 
                 if create_zip:
-                    # Create one ZIP containing all parts
                     zip_buffer = io.BytesIO()
                     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                         for idx, chunk in enumerate(chunks, 1):
-                            json_str = chunk[export_columns].to_json(orient="records", indent=2)
+                            start_idx = chunk["index"].iloc[0]
+                            end_idx = chunk["index"].iloc[-1]
+                            
+                            json_str = chunk[export_columns_with_index].to_json(orient="records", indent=2)
                             filename = f"x_archive_part{idx}_of_{len(chunks)}.json"
                             zip_file.writestr(filename, json_str)
                     
                     zip_buffer.seek(0)
                     st.download_button(
-                        label=f"📦 Download All as ZIP ({len(chunks)} files)",
+                        label=f"📦 Download All as ZIP ({len(chunks)} files) — Index {chunks[0]['index'].iloc[0]} → {chunks[-1]['index'].iloc[-1]}",
                         data=zip_buffer,
                         file_name="x_archive_split_json.zip",
                         mime="application/zip"
                     )
                 else:
-                    # Show individual download buttons
                     for idx, chunk in enumerate(chunks, 1):
-                        json_str = chunk[export_columns].to_json(orient="records", indent=2)
+                        start_idx = chunk["index"].iloc[0]
+                        end_idx = chunk["index"].iloc[-1]
+                        
+                        json_str = chunk[export_columns_with_index].to_json(orient="records", indent=2)
                         filename = f"x_archive_part{idx}_of_{len(chunks)}.json"
                         st.download_button(
-                            label=f"⬇️ {filename} ({len(chunk):,} items)",
+                            label=f"⬇️ {filename} ({len(chunk):,} items) — Index {start_idx} to {end_idx}",
                             data=json_str,
                             file_name=filename,
                             mime="application/json",
