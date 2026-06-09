@@ -21,7 +21,7 @@ pip install requests
  ```ps1
    [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_Actual_Key_Here", "User")
    ```
- Or 1 time use till exit powershell.
+   Or 1 time use till exit powershell.
  ```ps1
    $env:GROQ_API_KEY = "Your_Key_Here"
    ```
