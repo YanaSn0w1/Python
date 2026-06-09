@@ -7,7 +7,10 @@ A command-line tool that generates short, punchy one-liners using the Groq API (
 ## Requirements
 
 - Python 3.8+
-- `requests` library (`pip install requests`)
+- `requests` library
+```powershell
+pip install requests
+```
 - A Groq API key set as a Windows environment variable: `GROQ_API_KEY`
 
 ---
