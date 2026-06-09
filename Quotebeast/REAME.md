@@ -28,6 +28,7 @@ pip install requests
    $env:GROQ_API_KEY = "Your_Key_Here"
    ```
 3. Optional - Permanently set with Windows GUI.
+4. 
 Press Win and search for “Edit the system environment variables”  
 Click Environment Variables button  
 Under User variables (or System variables if you want it for all users), click New…  
@@ -35,7 +36,7 @@ Variable name: GROQ_API_KEY
 Variable value: paste your real Groq key  
 Click OK on everything
 After doing either of the above, restart PowerShell (or log out/in).
-4. Optional - You can see your key with:
+5. Optional - You can see your key with:
 ```ps1
 $env:GROQ_API_KEY
 ```
