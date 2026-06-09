@@ -8,7 +8,7 @@ A command-line tool that generates short, punchy one-liners using the Groq API (
 
 - Python 3.8+
 - `requests` library
-```
+```python
 pip install requests
 ```
 - A Groq API key set as a Windows environment variable: `GROQ_API_KEY`
