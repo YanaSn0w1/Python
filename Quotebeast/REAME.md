@@ -62,13 +62,8 @@ python quote_beast.py -m hot --infinite --model llama3.1:8b
 Most people chase success but run from the work that creates it.
 ```
 
-## License
-MIT
-# [Quote_beast.py](https://github.com/YanaSn0w1/Python/blob/main/Quotebeast/Quote_beast.py "Quote_beast.py") 
 
-# Use with [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") 
-
-A command-line tool that generates short, punchy one-liners using the Groq API (Llama 3.3 70B). Designed to be triggered by [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk")  for fast social media comment generation.
+A command-line tool that generates short, punchy one-liners using the Groq API (Llama 3.3 70B). Designed to be triggered by [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") for speed or in powershell.
 
 ---
 
@@ -150,3 +145,6 @@ Greeting shorthands are detected and handled:
 4. Validates the response — rejects anything too long, banned words, duplicates, or AI tells.
 5. Retries up to 12 times with increasing temperature if the output is rejected.
 6. Copies the final result to clipboard and saves it to history.
+
+## License
+MIT
