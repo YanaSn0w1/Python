@@ -17,9 +17,12 @@ pip install requests
 
 ## Setup
 
-1. Set your Groq API key in Windows environment variables (Start → search "environment variables" → add `GROQ_API_KEY` under user variables).
-2. Place `quote_beast.py` in the same folder as `quote_beast.ahk`.
-3. That's it — the AHK script calls Python directly.
+1. Set your Groq API key in Windows environment variable
+2. ```
+   $env:GROQ_API_KEY = "Your_Key_Here"
+   ```
+3. Place `quote_beast.py` in the same folder as `quote_beast.ahk`.
+4. That's it — the AHK script calls Python directly.
 
 ---
 
