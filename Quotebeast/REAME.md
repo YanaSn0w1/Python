@@ -21,11 +21,11 @@ pip install requests
  ```ps1
    [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_Actual_Key_Here", "User")
    ```
-   Or 1 time use till exit powershell.
+2. Or 1 time untill exit powershell.
  ```ps1
    $env:GROQ_API_KEY = "Your_Key_Here"
    ```
-Option 2 – Windows GUI. Press Win and search for “Edit the system environment variables”  
+3. Option 2 – Windows GUI. Press Win and search for “Edit the system environment variables”  
 Click Environment Variables button  
 Under User variables (or System variables if you want it for all users), click New…  
 Variable name: GROQ_API_KEY  
@@ -35,8 +35,8 @@ After doing either of the above, restart PowerShell (or log out/in) and you can 
 ```ps1
 $env:GROQ_API_KEY
 ```
-2. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run as administrator.
-3. That's it — the AHK script calls Python directly.
+4. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run as administrator.
+5. That's it — the AHK script calls Python directly.
 
 ---
 
