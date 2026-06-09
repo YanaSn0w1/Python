@@ -1,6 +1,8 @@
 ### Quote_Beast.py
 
-A command-line tool that generates short, punchy one-liners using the Groq API (Llama 3.3 70B). Designed to be triggered by [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") for speed or in powershell.
+A command-line tool that generates short, punchy one-liners using the Groq API (Llama 3.3 70B).
+
+Designed to be triggered by [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") for speed.
 
 ---
 
@@ -41,13 +43,10 @@ $env:GROQ_API_KEY
 
 ---
 
-## Usage
-
+## Powershell command examples
 ```
 python quote_beast.py [options]
 ```
-
-## Powershell command examples
 ```bash
 python quote_beast.py -m hot -n 5
 ```
