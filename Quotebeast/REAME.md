@@ -43,7 +43,7 @@ $env:GROQ_API_KEY
 
 ---
 
-## Powershell command examples
+## Powershell usage examples
 ```
 python quote_beast.py [options]
 ```
