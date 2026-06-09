@@ -1,69 +1,4 @@
-# [Quote_beast.py](https://github.com/YanaSn0w1/Python/blob/main/Quotebeast/Quote_beast.py "Quote_beast.py") ⬅️
-
-# Use with [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") ⬅️
-
-AI Quote Beast is a local Python tool that generates short, punchy one‑liners using your Ollama models. Four modes: **hot**, **boost**, **flirt**, **stoic** — each with strict tone rules and unified.
-
-## Features
-- Four distinct modes with handcrafted prompts  
-- One‑sentence output, max 20 words  
-- Rolling history to avoid repetition  
-- Infinite mode with Enter/X control  
-- Customizable Ollama model  
-- Fallback lines if generation fails
-- Saves each quote to clipboard
-- Saves last 100 to quote_beast_history.json in the user folder
-- Copy something → run the script → it reacts to what you copied.
-- Resets to default after every generation (as long as you don’t copy new text first)
-
-## Requirements
-- Python 3.8+  
-- Ollama running locally  
-- `pip install requests`
-
-## Usage
-# Start ollama in powershell
-```bash
-ollama serve
-```
-# Open new tab in powershell then use the commands
-```bash
-python quote_beast.py -m hot
-python quote_beast.py -m boost
-python quote_beast.py -m flirt
-python quote_beast.py -m stoic
-```
-
-## Additional flags
-```bash
--n 5
-```
-```bash
---infinite
-```
-```bash
---model llama3.1:8b
-```
-
-## Full command examples
-```bash
-python quote_beast.py -m hot -n 5
-```
-```bash
-python quote_beast.py -m hot --infinite
-```
-```bash
-python quote_beast.py -m hot --infinite --model llama3.1:8b
-```
-
-## Example Output
-```
-🔥 HOT #4821 🔥
-Most people chase success but run from the work that creates it.
-```
-
-
-A command-line tool that generates short, punchy one-liners using the Groq API (Llama 3.3 70B). Designed to be triggered by [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") for speed or in powershell.
+### A command-line tool that generates short, punchy one-liners using the Groq API (Llama 3.3 70B). Designed to be triggered by [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") for speed or in powershell.
 
 ---
 
@@ -87,6 +22,14 @@ A command-line tool that generates short, punchy one-liners using the Groq API (
 
 ```
 python quote_beast.py [options]
+```
+
+## Powershell command examples
+```bash
+python quote_beast.py -m hot -n 5
+```
+```bash
+python quote_beast.py -m hot --infinite
 ```
 
 ### Options
