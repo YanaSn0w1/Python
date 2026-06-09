@@ -28,7 +28,6 @@ pip install requests
    $env:GROQ_API_KEY = "Your_Key_Here"
    ```
 3. Optional - Permanently set with Windows GUI.
-4. 
 Press Win and search for “Edit the system environment variables”  
 Click Environment Variables button  
 Under User variables (or System variables if you want it for all users), click New…  
