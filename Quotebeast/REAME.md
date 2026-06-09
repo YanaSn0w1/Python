@@ -31,10 +31,10 @@ Under User variables (or System variables if you want it for all users), click N
 Variable name: GROQ_API_KEY  
 Variable value: paste your real Groq key  
 Click OK on everything
-
-After doing either of the above, restart PowerShell (or log out/in) and you can test it with:
-
-
+After doing either of the above, restart PowerShell (or log out/in) and you can see your key with:
+```ps1
+$env:GROQ_API_KEY
+```
 3. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run as administrator.
 4. That's it — the AHK script calls Python directly.
 
