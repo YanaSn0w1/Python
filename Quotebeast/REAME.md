@@ -38,8 +38,19 @@ After doing either of the above, restart PowerShell (or log out/in).
 ```ps1
 $env:GROQ_API_KEY
 ```
-5. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run as administrator.
-6. That's it — the AHK script calls Python directly.
+5. Optional - Check if Groq models are online
+```ps1
+$headers = @{ "Authorization" = "Bearer $env:GROQ_API_KEY" }
+
+Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" `
+                  -Headers $headers `
+                  -Method Get | 
+    Select-Object -ExpandProperty data | 
+    Select-Object id, created, owned_by | 
+    Format-Table -AutoSize
+```
+6. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run as administrator.
+7. That's it — the AHK script calls Python directly.
 
 ---
 
