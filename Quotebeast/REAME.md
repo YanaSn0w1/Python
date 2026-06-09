@@ -51,7 +51,6 @@ Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" `
     Format-Table -AutoSize
 ```
 6. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run as administrator.
-7. That's it — the AHK script calls Python directly.
 
 ---
 
