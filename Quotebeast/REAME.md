@@ -21,13 +21,10 @@ pip install requests
 
 1. Set your Groq API key in powershell permanently.
  ```ps1
+   $env:GROQ_API_KEY = "Your_Key_Here"
    [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_Actual_Key_Here", "User")
    ```
-2. Optional - Set for a single powershell session.
- ```ps1
-   $env:GROQ_API_KEY = "Your_Key_Here"
-   ```
-3. Optional - Permanently set with Windows GUI.
+2. Optional - Permanently set with Windows GUI.
 Press Win and search for “Edit the system environment variables”  
 Click Environment Variables button  
 Under User variables (or System variables if you want it for all users), click New…  
@@ -35,11 +32,11 @@ Variable name: GROQ_API_KEY
 Variable value: paste your real Groq key  
 Click OK on everything
 After doing either of the above, restart PowerShell (or log out/in).
-5. Optional - You can see your key with:
+3. Optional - You can see your key with:
 ```ps1
 $env:GROQ_API_KEY
 ```
-5. Optional - Check if Groq models are online
+4. Optional - Check if Groq models are online
 ```ps1
 $headers = @{ "Authorization" = "Bearer $env:GROQ_API_KEY" }
 
@@ -50,7 +47,7 @@ Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" `
     Select-Object id, created, owned_by | 
     Format-Table -AutoSize
 ```
-6. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run as administrator.
+5. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run as administrator.
 
 ---
 
