@@ -21,8 +21,8 @@ pip install requests
 
 1. Set your Groq API key in powershell permanently.
  ```ps1
-   $env:GROQ_API_KEY = "Your_Key_Here"
-   [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_Actual_Key_Here", "User")
+   $env:GROQ_API_KEY = "Your_API_Key_Here"
+   [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_API_Key_Here", "User")
    ```
 2. Optional - Permanently set with Windows GUI.
 Press Win and search for “Edit the system environment variables”  
