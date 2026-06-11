@@ -97,6 +97,12 @@ def get_clipboard():
 
 
 def copy_to_clipboard(text):
+    # Write to file so AHK can set clipboard reliably
+    try:
+        with open(_path("last_output.txt"), "w", encoding="utf-8") as f:
+            f.write(text)
+    except:
+        pass
     if is_windows():
         try:
             win32 = importlib.import_module("win32clipboard")
@@ -113,6 +119,17 @@ def copy_to_clipboard(text):
                 win32.CloseClipboard()
             except:
                 pass
+        # PowerShell fallback
+        try:
+            subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"Set-Clipboard -Value {repr(text)}"],
+                capture_output=True
+            )
+            print(f"{COLORS['text']}📋 Copied!{COLORS['reset']}")
+            return
+        except:
+            pass
     print(f"{COLORS['text']}{text}{COLORS['reset']}")
 
 
@@ -160,10 +177,10 @@ def sanitize_context(ctx, max_chars=160):
         return ""
 
     TWITTER_GREETINGS = {
-        r'\bGM[!.,]?\b': 'Good Morning',
-        r'\bGA[!.,]?\b': 'Good Afternoon',
-        r'\bGE[!.,]?\b': 'Good Evening',
-        r'\bGN[!.,]?\b': 'Good Night',
+        r'\bGM[!.,]?\b': 'GM',
+        r'\bGA[!.,]?\b': 'GA',
+        r'\bGE[!.,]?\b': 'GE',
+        r'\bGN[!.,]?\b': 'GN',
     }
     COMMUNITY_TAGS = r'\b(CT|FT|JM|XRP|BTC|ETH|SOL|crypto\s+twitter|football\s+twitter)\b'
     TIME_WISH_PATTERNS = [
@@ -177,6 +194,9 @@ def sanitize_context(ctx, max_chars=160):
         (r'\bwish\b.{0,40}\b(night|evening|morning|afternoon)\b', None),
         (r'\b(night|evening)\b.{0,30}\b(stars?|moon|peaceful|beautiful|rest)\b', 'Good Night'),
     ]
+
+    # Names that refer to the account owner — strip from incoming context
+    OWN_NAMES = {'yana', 'yanaheat'}
 
     ctx = re.sub(r'@\w+', '', ctx)
 
@@ -203,6 +223,9 @@ def sanitize_context(ctx, max_chars=160):
                 rest = re.sub(COMMUNITY_TAGS, '', rest, flags=re.I).strip()
                 rest = re.sub(r'^\s*(and|or|to|the|a)\s+', '', rest, flags=re.I).strip()
                 rest = re.sub(r'\b(fam|all|everyone|folks|world|friends|peeps|y\'all|yall)\b', '', rest, flags=re.I).strip()
+                # Strip own name
+                for name in OWN_NAMES:
+                    rest = re.sub(rf'\b{name}\b', '', rest, flags=re.I).strip()
                 rest = " ".join(rest.split())
                 if rest and len(rest.split()) >= 2:
                     return greeting + ' — ' + rest
@@ -212,13 +235,17 @@ def sanitize_context(ctx, max_chars=160):
             word = m2.group(1).lower()
             mapping = {
                 'goodnight': 'Good Night', 'goodmorning': 'Good Morning',
-                'goodevening': 'Good Evening', 'goodafternoon': 'Good Afternoon'
+                'goodevening': 'Good Evening', 'goodafternoon': 'Good Afternoon',
+                'morning': 'Morning', 'afternoon': 'Afternoon',
+                'evening': 'Evening', 'night': 'Night',
             }
-            greeting = mapping.get(word, 'Good ' + word.capitalize())
+            greeting = mapping.get(word, word.capitalize())
             rest = s[m2.end():].strip()
             rest = re.sub(COMMUNITY_TAGS, '', rest, flags=re.I).strip()
             rest = re.sub(r'^\s*(and|or|to|the|a)\s+', '', rest, flags=re.I).strip()
             rest = re.sub(r'\b(fam|all|everyone|folks|world|friends|peeps|y\'all|yall)\b', '', rest, flags=re.I).strip()
+            for name in OWN_NAMES:
+                rest = re.sub(rf'\b{name}\b', '', rest, flags=re.I).strip()
             rest = " ".join(rest.split())
             if rest and len(rest.split()) >= 2:
                 return greeting + ' — ' + rest
@@ -244,7 +271,7 @@ def sanitize_context(ctx, max_chars=160):
 
     display_name_words = set()
     first_real_line = next((l.strip() for l in ctx.splitlines() if l.strip()), "")
-    if first_real_line and not re.search(r'@\w+', first_real_line) and len(first_real_line.split()) <= 2:
+    if first_real_line and not re.search(r'@\w+', first_real_line) and len(first_real_line.split()) <= 1 and not first_real_line.isupper():
         for w in first_real_line.split():
             w = re.sub(r'[^a-zA-Z]', '', w)
             if len(w) > 2:
@@ -255,13 +282,11 @@ def sanitize_context(ctx, max_chars=160):
         stripped = line.strip()
         if not stripped:
             continue
-        if len(stripped.split()) < 2:
-            continue
         if re.search(r'@\w+', stripped):
             continue
         s_tmp = stripped.encode('ascii', errors='ignore').decode('ascii').strip()
         s_tmp = re.sub(r'https?://\S+|pic\.\S+', '', s_tmp).strip()
-        if len(s_tmp.split()) >= 2:
+        if s_tmp:
             content_lines.append(s_tmp)
         if len(content_lines) >= 2:
             break
@@ -275,7 +300,7 @@ def sanitize_context(ctx, max_chars=160):
         words = s.split()
         words = [w for w in words if w.lower().rstrip('.,!?') not in display_name_words]
         s = " ".join(words).strip()
-    if len(s.split()) < 2:
+    if not s:
         return ""
     return s[:max_chars]
 
@@ -315,23 +340,27 @@ def save_last_ai_quote(text):
 # ── Banned content ────────────────────────────────────────────────────────────
 
 BANNED_WORDS = [
-    "sunshine", "sleepyhead", "dms", " dm ", "follow", "retweet",
-    "re-tweet", "engagement", " active", "notification", " fb ", "facebook"
+    "sunshine", "sleepyhead", "dms", " dm ",
+    "retweet", "re-tweet", "engagement", " active",
+    "notification", " fb ", "facebook", "connect"
 ]
+# Own name — checked separately with word-boundary match
+OWN_NAME_BAN = re.compile(r"\byana\b", re.IGNORECASE)
 BANNED_PHRASES = [
     "gm morning", "gm good morning", "gn night", "gn good night",
-    "ga afternoon", "ge evening"
+    "ga afternoon", "ge evening",
+    "that means a lot", "being called that", "considered a friend",
+    "means everything", "nice to hear", "great to hear",
 ]
 BANNED_AI_TELLS = ["as an ai", "i can help", "let me know"]
 
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-# Shared hard rules — deliberately short so the model doesn't drown in them
 HARD_RULES = """Rules:
 - One sentence only. Stop after the period/exclamation/question mark.
 - Plain text: no emojis, no markdown, no quotes, no asterisks.
-- Never use anyone's name. Use I, you, they, or no subject.
+- Never use anyone's name, including Yana. Use I, you, they, or no subject.
 - Use contractions (I'd, I'm, don't, it's).
 - Never say: sunshine, sleepyhead, dm, follow, retweet, engagement, notification, facebook."""
 
@@ -363,49 +392,53 @@ MODE_PERSONAS = {
 }
 
 
-def build_messages(mode, comment_context="", short=False, target_words=None, recent=None):
+def build_messages(mode, comment_context="", short=False, target_words=None, recent=None, max_words=45):
     mode = (mode or "hot").strip().lower()
     persona = MODE_PERSONAS.get(mode, "You write concise, original one-liners.\n")
     has_context = bool(comment_context)
 
-    GREETING_WORDS = {'good morning', 'good afternoon', 'good evening', 'good night', 'good day'}
-    is_greeting = has_context and any(
-        comment_context.lower().startswith(g) for g in GREETING_WORDS
-    )
+    GREETING_MAP = {
+        'good morning': 'Good Morning',
+        'good afternoon': 'Good Afternoon',
+        'good evening': 'Good Evening',
+        'good night': 'Good Night',
+        'good day': 'Good Day',
+        'morning': 'Morning',
+        'afternoon': 'Afternoon',
+        'evening': 'Evening',
+        'night': 'Night',
+        'gm': 'GM',
+        'ga': 'GA',
+        'ge': 'GE',
+        'gn': 'GN',
+    }
 
-    # Word budget hint
-    if target_words:
-        word_hint = f"Aim for about {target_words} words."
-    elif short:
-        word_hint = "Keep it under 10 words."
-    else:
-        word_hint = "Keep it under 18 words."
+    reply_word = None
+    extra = ""
+    if has_context:
+        ctx_lower = comment_context.lower()
+        for key in sorted(GREETING_MAP, key=len, reverse=True):
+            if ctx_lower.startswith(key):
+                reply_word = GREETING_MAP[key]
+                extra = comment_context[len(key):].lstrip(' —,.!').strip()
+                break
 
-    # Avoid-repetition hint — last 5 only, no need to paste the whole history
+    is_greeting = reply_word is not None
+
     avoid_hint = ""
     if recent:
         avoid_hint = f"\nDo not repeat or closely rephrase any of these: {recent[-5:]}"
 
-    system = f"{persona}\n{HARD_RULES}\n{word_hint}"
+    system = f"{persona}\n{HARD_RULES}\nMax {max_words} words. Do not repeat or summarize what was said."
 
-    # ── User prompt ───────────────────────────────────────────────────────────
     if not has_context:
         user = f"Write one original sentence.{avoid_hint}"
 
     elif is_greeting:
-        greeting_label = next(
-            (g for g in GREETING_WORDS if comment_context.lower().startswith(g)),
-            "good morning"
-        )
-        reply_word = greeting_label.title()
-        extra = comment_context[len(greeting_label):].lstrip(' —').strip()
-        extra_part = f" Then react to: \"{extra}\"." if extra else ""
-        user = (
-            f"Reply to a \"{reply_word}\" greeting."
-            f" Start with exactly \"{reply_word}\" — don't expand it further."
-            f"{extra_part}"
-            f" One warm, natural sentence.{avoid_hint}"
-        )
+        if extra:
+            user = f"Reply to \"{reply_word}, {extra}\". Start with \"{reply_word}\". Max {max_words} words. Example: \"{reply_word}, [short reaction].\"{avoid_hint}"
+        else:
+            user = f"Reply to \"{reply_word}\". Start with \"{reply_word}\". Max {max_words} words. Example: \"{reply_word}, [short thought].\"{avoid_hint}"
 
     else:
         is_question = '?' in comment_context
@@ -419,8 +452,7 @@ def build_messages(mode, comment_context="", short=False, target_words=None, rec
         if is_question:
             user = (
                 f"Topic: \"{comment_context}\"\n"
-                f"Answer the question directly in first person. Be specific, not generic."
-                f" One sentence.{avoid_hint}"
+                f"Answer directly in first person. Be specific. One sentence.{avoid_hint}"
             )
         else:
             user = (
@@ -472,21 +504,30 @@ def ai_line(mode, comment_context="", model=MAIN_MODEL, short=False):
         model = MAIN_MODEL
 
     target_words = None
-    max_words = SHORT_MAX_WORDS if short else 45
-    if has_context and not short:
-        ctx_for_count = comment_context.split(' — ')[-1] if ' — ' in comment_context else comment_context
-        src_words = len(ctx_for_count.split())
-        target_words = max(5, min(12, src_words))
-        max_words = target_words + 6  # breathing room vs original +4
+    max_words = 6  # tight cap for blind
+    if has_context:
+        src_words = len(comment_context.replace(' — ', ' ').split())
+        if short:
+            max_words = max(6, min(src_words + 3, 10))
+        else:
+            lo = max(5, src_words - 2)
+            hi = min(15, src_words + 3)
+            max_words = random.randint(lo, hi)
+
+        try:
+            with open(os.path.join(SCRIPT_DIR, "debug_api.txt"), "a", encoding="utf-8") as dbg:
+                dbg.write(f"BUDGET: ctx={repr(comment_context[:60])} src={src_words} max={max_words} short={short}\n")
+        except:
+            pass
 
     seen_this_run = set()
-    recent = get_recent_quotes() if has_context else []
+    recent = get_recent_quotes()
 
     for attempt in range(MAX_ATTEMPTS):
         try:
             messages = build_messages(
                 mode, comment_context, short,
-                target_words=target_words, recent=recent
+                target_words=target_words, recent=recent, max_words=max_words
             )
             temp = (
                 min(0.85 + attempt * 0.05, 1.3)
@@ -499,7 +540,7 @@ def ai_line(mode, comment_context="", model=MAIN_MODEL, short=False):
                     "model":       model,
                     "messages":    messages,
                     "temperature": temp,
-                    "max_tokens":  NUM_PREDICT_SHORT if short else NUM_PREDICT_LONG,
+                    "max_tokens":  NUM_PREDICT_LONG,
                     "top_p":       TOP_P_SEQUENCE[min(attempt, len(TOP_P_SEQUENCE) - 1)],
                     "stop":        DEFAULT_STOP_LIST,
                 },
@@ -518,6 +559,7 @@ def ai_line(mode, comment_context="", model=MAIN_MODEL, short=False):
                     err = resp_json.get("error", "")
                     dbg.write(
                         f"attempt={attempt} model={model} status={r.status_code} "
+                        f"short={short} ctx={repr(comment_context)} max_words={max_words} "
                         f"err={repr(err)} raw={repr(raw[:120])}\n"
                     )
             except:
@@ -527,13 +569,35 @@ def ai_line(mode, comment_context="", model=MAIN_MODEL, short=False):
                 model = FALLBACK_MODEL
                 continue
 
+            if r.status_code == 429:
+                if model == MAIN_MODEL:
+                    model = FALLBACK_MODEL
+                    continue
+                else:
+                    break
+
             text = force_single_sentence(raw)
             text = clean_text(text)
             words = len(text.split())
 
+            def _core(t):
+                t = t.lower().strip()
+                for key in ['good morning', 'good afternoon', 'good evening', 'good night',
+                            'morning', 'afternoon', 'evening', 'night', 'gm', 'gn', 'ga', 'ge']:
+                    if t.startswith(key):
+                        t = t[len(key):].lstrip(' ,—').strip()
+                        break
+                return ' '.join(t.split()[:5])
+
+            text_core = _core(text)
+            recent_cores = [_core(q) for q in recent]
+            seen_cores = [_core(s) for s in seen_this_run]
+
             is_duplicate = (
                 text in seen_this_run
                 or text.lower() in [q.lower() for q in recent]
+                or (text_core and text_core in recent_cores)
+                or (text_core and text_core in seen_cores)
             )
             has_banned = (
                 any(b in text.lower() for b in BANNED_WORDS)
@@ -591,8 +655,9 @@ def main():
 
     clipboard_text = get_clipboard() or ""
     last_ai = get_last_ai_quote()
-
-    if args.blind or not clipboard_text or clipboard_text == last_ai or args.number > 1:
+    clipboard_normalized = clipboard_text.strip()
+    last_ai_normalized = last_ai.strip()
+    if args.blind or not clipboard_text or clipboard_normalized == last_ai_normalized or args.number > 1:
         comment_context = ""
     else:
         _cb_ascii = clipboard_text.encode('ascii', errors='ignore').decode('ascii')
@@ -612,9 +677,11 @@ def main():
                 else _original_greeting
             )
 
+        # FIX 1: bare greetings included so extra content (e.g. "my friend") gets appended
         pure_greetings = {
             'GM', 'GN', 'GA', 'GE',
-            'Good Morning', 'Good Afternoon', 'Good Evening', 'Good Night', 'Good Day'
+            'Good Morning', 'Good Afternoon', 'Good Evening', 'Good Night', 'Good Day',
+            'Morning', 'Afternoon', 'Evening', 'Night',
         }
         if comment_context in pure_greetings:
             for line in clipboard_text.splitlines():
@@ -628,7 +695,7 @@ def main():
                 clean = stripped.encode('ascii', errors='ignore').decode('ascii')
                 clean = re.sub(r'https?://\S+|pic\.\S+', '', clean).strip()
                 clean = re.sub(
-                    r'\b(GM|GN|GA|GE|Good\s+(?:Morning|Afternoon|Evening|Night|Day))\b',
+                    r'\b(GM|GN|GA|GE|Good\s+(?:Morning|Afternoon|Evening|Night|Day)|Morning|Afternoon|Evening|Night)\b',
                     '', clean, flags=re.I
                 ).strip()
                 clean = re.sub(r'\b(fam|all|everyone|folks|and)\b', '', clean, flags=re.I).strip()
@@ -637,11 +704,20 @@ def main():
                     comment_context = comment_context + ' — ' + clean
                     break
 
+        # Strip own name from context so the model never sees it
+        for own_name in ['Yana', 'YanaHeat']:
+            comment_context = re.sub(rf'\b{own_name}\b', '', comment_context, flags=re.I).strip()
+        comment_context = ' '.join(comment_context.split())
+
     GREETING_LABELS = {
         'good morning': '🌅 Good Morning detected',
         'good afternoon': '☀️ Good Afternoon detected',
         'good evening': '🌆 Good Evening detected',
         'good night': '🌙 Good Night detected',
+        'morning': '🌅 Morning detected',
+        'afternoon': '☀️ Afternoon detected',
+        'evening': '🌆 Evening detected',
+        'night': '🌙 Night detected',
     }
     if comment_context:
         base = comment_context.split(' — ')[0].lower().strip()
