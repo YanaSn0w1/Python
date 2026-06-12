@@ -24,7 +24,7 @@ pip install requests
    $env:GROQ_API_KEY = "Your_API_Key_Here"
    [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_API_Key_Here", "User")
    ```
-2. Optional - Permanently set in Windows.
+2. Optional - Permanently set in Windows. 
 Search in Windows for “Edit the system environment variables”  
 Click Environment Variables button  
 Under User variables (or System variables if you want it for all users), click New…  
