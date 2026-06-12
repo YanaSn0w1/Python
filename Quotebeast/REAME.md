@@ -51,7 +51,7 @@ Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" `
     Format-Table -AutoSize
 ```
 
-5. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run as administrator.
+5. Place `quote_beast.py` in the same folder as `quote_beast.ahk` and run the '.ahk' as administrator.
 
 ---
 
