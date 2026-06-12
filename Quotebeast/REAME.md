@@ -33,7 +33,7 @@ pip install requests
 - Variable value: paste your real Groq key  
 - Click OK on everything
 - After doing either of the above, restart PowerShell (or log out/in).
-- 
+
 3. Optional - You can see your key with:
 ```ps1
 $env:GROQ_API_KEY
