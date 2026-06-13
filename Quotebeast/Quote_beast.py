@@ -22,9 +22,11 @@ FALLBACK_MODEL = "llama-3.1-8b-instant"
 
 LAST_MODE_FILE = "last_mode.txt"
 LAST_AI_QUOTE_FILE = "last_ai_quotes.txt"
-HISTORY_SIZE = 20
+HISTORY_SIZE = 10
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 COLORS = {"header": "\033[96m", "text": "\033[97m", "reset": "\033[0m"}
+
+SINGLE_FALLBACK = "This is a fallback."
 
 
 def _path(name):
@@ -42,7 +44,6 @@ def get_clipboard():
                 errors='replace', timeout=2
             )
             text = result.stdout.strip()
-            # Remove ?? placeholders left by emoji encoding
             text = re.sub(r'\?{2,}', '', text).strip()
             return text
     except Exception:
@@ -63,7 +64,6 @@ def copy_to_clipboard(text):
             return
         except Exception:
             pass
-        # PowerShell fallback if win32clipboard not available
         try:
             subprocess.run(
                 ['powershell', '-NoProfile', '-Command', f'Set-Clipboard -Value @\'\n{text}\n\'@'],
@@ -98,7 +98,6 @@ def sanitize_context(ctx, max_chars=120):
     ctx = re.sub(r'@\w+', '', ctx)
     ctx = re.sub(r'https?://\S+', '', ctx)
     ctx = re.sub(r'\bx\.com/\S+', '', ctx)
-    # Strip all emoji and non-ASCII
     ctx = ctx.encode('ascii', errors='ignore').decode('ascii')
     ctx = re.sub(r'\?{2,}', '', ctx)
     ctx = ' '.join(ctx.split()).strip()
@@ -141,12 +140,11 @@ def save_last_ai_quote(text):
         pass
 
 
-# Words permanently banned from all outputs
 BANNED_WORDS = {
-    'sunshine',
-    'follow', 'retweet', 'quote', 'subscribe', 'comment', 'like',
-    'share', 'engage', 'engagement', 'notification', 'notifications',
-    'dm', 'dms', 'inbox', 'collab', 'collaboration',
+    'sunshine', 'wishing',
+    'follow', 'retweet', 'subscribe', 'engage', 'engagement',
+    'notification', 'notifications', 'dm', 'dms', 'inbox',
+    'collab', 'collaboration',
 }
 
 BANNED_PHRASES = {
@@ -154,57 +152,10 @@ BANNED_PHRASES = {
     'tell me', 'hit the', 'click the', 'link in', 'looks like',
 }
 
-# ── Prompts ───────────────────────────────────────────────────────────────────
-
 OUTPUT_RULES = (
     "- Non poetic/robotic.\n"
     "- Never use anyone's name.\n"
 )
-
-def build_messages(mode, comment_context="", short=False, recent=None):
-    mode = (mode or "hot").strip().lower()
-    limit = "max 8 words" if short else "max 15 words"
-    context = f"\n\nReact to this: \"{comment_context}\"" if comment_context else ""
-    if recent:
-        # Extract all significant words from history to block
-        stopwords = {'a','an','the','and','or','but','in','on','at','to','for',
-                     'of','with','is','it','its','i','you','we','they','he','she',
-                     'my','your','our','their','be','are','was','were','not','no',
-                     'so','do','did','have','has','had','this','that','these','those'}
-        blocked = set()
-        for q in recent:
-            for w in re.findall(r"[a-zA-Z']+", q.lower()):
-                if w not in stopwords:
-                    blocked.add(w)
-        blocked_list = sorted(blocked)
-        avoid = f"\nDo not use any of these words: {', '.join(blocked_list)}" if blocked_list else ""
-    else:
-        avoid = ""
-
-    personas = {
-        "hot":   f"Write ONE punchy hot take ({limit}). Edgy and direct, never rude or insulting.\n",
-        "boost": f"Write ONE grounded motivational sentence ({limit}). Honest, no fluff.\n",
-        "flirt": (
-            f"You are YanaHeat on X. Vibe: real, positive, hustling quietly, supportive. "
-            f"Write ONE reply ({limit}). Keep it genuine, no cringe.\n"
-        ),
-        "stoic": f"Write ONE stoic sentence ({limit}). Detached, factual. Like 'You control X, not Y'.\n",
-    }
-    persona = personas.get(mode, f"Write ONE sharp original sentence ({limit}).\n")
-    banned_str = ', '.join(sorted(BANNED_WORDS | {'drop a', 'let me know', 'tag a'}))
-    system = persona + OUTPUT_RULES + f"- Never use: {banned_str}.\n"
-    if comment_context:
-        user = f"React to this specifically: \"{comment_context}\"\nWrite ONE sentence in response. Stay on topic.{avoid}"
-    else:
-        user = f"Write the sentence now.{avoid}"
-
-    return [
-        {"role": "system", "content": system},
-        {"role": "user", "content": user},
-    ]
-
-
-# ── Fallbacks ─────────────────────────────────────────────────────────────────
 
 TRAILING_FILLER = re.compile(
     r'\s+(already|somehow|tonight|today|right now|out there|anyhow|'
@@ -216,7 +167,7 @@ TRAILING_FILLER = re.compile(
 )
 
 def strip_trailing_filler(text):
-    for _ in range(5):  # strip up to 5 trailing filler words
+    for _ in range(5):
         cleaned = TRAILING_FILLER.sub('', text).strip()
         if cleaned == text:
             break
@@ -229,7 +180,51 @@ def get_fallback(mode=None, short=False):
     return SINGLE_FALLBACK
 
 
-# ── Generation ────────────────────────────────────────────────────────────────
+def build_messages(mode, comment_context="", short=False, recent=None):
+    mode = (mode or "hot").strip().lower()
+    limit = "max 8 words" if short else "max 15 words"
+
+    if recent:
+        stopwords = {'a','an','the','and','or','but','in','on','at','to','for',
+                     'of','with','is','it','its','i','you','we','they','he','she',
+                     'my','your','our','their','be','are','was','were','not','no',
+                     'so','do','did','have','has','had','this','that','these','those'}
+        blocked = set()
+        for q in recent[-3:]:
+            for w in re.findall(r"[a-zA-Z']+", q.lower()):
+                if w not in stopwords:
+                    blocked.add(w)
+        blocked_list = sorted(blocked)
+        avoid = f"\nDo not use any of these words: {', '.join(blocked_list)}" if blocked_list else ""
+    else:
+        avoid = ""
+
+    personas = {
+        "hot": (
+            f"You are YonaHeet. Write ONE hot take ({limit}) that boldly contradicts "
+            f"a common belief. Blunt, punchy, never rude or insulting.\n"
+        ),
+        "boost": f"Write ONE grounded motivational sentence ({limit}). Honest, no fluff.\n",
+        "flirt": (
+            f"You are YanaHeat on X. Vibe: real, positive, hustling quietly, supportive. "
+            f"Write ONE reply ({limit}). Keep it genuine, no cringe.\n"
+        ),
+        "stoic": f"Write ONE stoic sentence ({limit}). Detached, factual. Like 'You control X, not Y'.\n",
+    }
+    persona = personas.get(mode, f"Write ONE sharp original sentence ({limit}).\n")
+    banned_str = ', '.join(sorted(BANNED_WORDS | {'drop a', 'let me know', 'tag a'}))
+    system = persona + OUTPUT_RULES + f"- Never use: {banned_str}.\n"
+
+    if comment_context:
+        user = f"React to this specifically: \"{comment_context}\"\nWrite ONE sentence in response. Stay on topic.{avoid}"
+    else:
+        user = f"Write the sentence now.{avoid}"
+
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+
 
 def force_single_sentence(text):
     if not text:
@@ -251,25 +246,25 @@ def looks_like_assistant(s):
         return True
     bad = ["i'm here to help", "as an ai", "as an assistant", "i can help",
            "let me know", "system:", "assistant:"]
-    s_low = s.lower()
-    return any(p in s_low for p in bad)
+    return any(p in s.lower() for p in bad)
+
+def write_debug(line):
+    try:
+        with open(_path("debug_api.txt"), "a", encoding="utf-8") as dbg:
+            dbg.write(line + "\n")
+        with open(_path("debug_api.txt"), "r", encoding="utf-8") as dbg:
+            lines = dbg.readlines()
+        if len(lines) > 50:
+            with open(_path("debug_api.txt"), "w", encoding="utf-8") as dbg:
+                dbg.writelines(lines[-50:])
+    except Exception:
+        pass
 
 def ai_line(mode, comment_context="", short=False):
     mode = (mode or "hot").strip().lower()
     max_words = 10 if short else 15
     model = MAIN_MODEL
     recent = get_recent_quotes()
-
-    stopwords = {'a','an','the','and','or','but','in','on','at','to','for',
-                 'of','with','is','it','its','i','you','we','they','he','she',
-                 'my','your','our','their','be','are','was','were','not','no',
-                 'so','do','did','have','has','had','this','that','these','those'}
-    # Build blocked word set from last 5 outputs only (20 would block too much)
-    blocked = set()
-    for q in recent[-5:]:
-        for w in re.findall(r"[a-zA-Z]+", q.lower()):
-            if w not in stopwords:
-                blocked.add(w)
 
     for attempt in range(8):
         try:
@@ -294,19 +289,8 @@ def ai_line(mode, comment_context="", short=False):
 
             resp_json = r.json()
             raw = resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
-
-            try:
-                with open(_path("debug_api.txt"), "a", encoding="utf-8") as dbg:
-                    err = resp_json.get("error", "")
-                    dbg.write(f"attempt={attempt} model={model} status={r.status_code} temp={temp:.2f} err={repr(err)} raw={repr(raw[:100])}\n")
-                # Keep only last 20 lines
-                with open(_path("debug_api.txt"), "r", encoding="utf-8") as dbg:
-                    lines = dbg.readlines()
-                if len(lines) > 20:
-                    with open(_path("debug_api.txt"), "w", encoding="utf-8") as dbg:
-                        dbg.writelines(lines[-20:])
-            except Exception:
-                pass
+            err = resp_json.get("error", "")
+            write_debug(f"attempt={attempt} model={model} status={r.status_code} temp={temp:.2f} err={repr(err)} raw={repr(raw[:100])}")
 
             if r.status_code == 429:
                 model = FALLBACK_MODEL
@@ -327,32 +311,20 @@ def ai_line(mode, comment_context="", short=False):
             fingerprint = ' '.join(text.lower().split()[:4])
             recent_fingerprints = [' '.join(q.lower().split()[:4]) for q in recent]
             is_dup = text.lower() in [q.lower() for q in recent] or fingerprint in recent_fingerprints
-            # Hard reject if any blocked word appears in output
             output_words = set(re.findall(r"[a-zA-Z]+", text.lower()))
             text_lower = text.lower()
             has_blocked = (
                 bool(output_words & BANNED_WORDS) or
                 any(p in text_lower for p in BANNED_PHRASES)
             )
-            if comment_context is None or comment_context == "":
-                has_blocked = has_blocked or bool(output_words & blocked)
             if 1 <= words <= max_words and not is_dup and not has_blocked:
                 return text
 
-            try:
-                with open(_path("debug_api.txt"), "a", encoding="utf-8") as dbg:
-                    dbg.write(f"  REJECTED: words={words} max={max_words} dup={text.lower() in [q.lower() for q in recent]} text={repr(text)}\n")
-            except Exception:
-                pass
-
+            write_debug(f"  REJECTED: words={words} max={max_words} dup={is_dup} banned={has_blocked} text={repr(text)}")
             time.sleep(0.2)
 
         except Exception as e:
-            try:
-                with open(_path("debug_api.txt"), "a", encoding="utf-8") as dbg:
-                    dbg.write(f"attempt={attempt} EXCEPTION={repr(str(e))}\n")
-            except Exception:
-                pass
+            write_debug(f"attempt={attempt} EXCEPTION={repr(str(e))}")
             time.sleep(0.3)
 
     return SINGLE_FALLBACK
@@ -377,7 +349,6 @@ def main():
     if args.mode is None:
         args.mode = get_last_mode()
 
-    # Ensure last_mode.txt exists
     save_last_mode(args.mode)
 
     print(f"{COLORS['header']}AI QUOTE BEAST — Mode: {args.mode} — {datetime.now().strftime('%H:%M')}{COLORS['reset']}\n")
@@ -407,11 +378,11 @@ def main():
         colored, raw = generate_line(args.mode, current_context, args.short)
         print(colored)
         if raw and i == max(1, args.number) - 1:
-            copy_to_clipboard(raw)
-            save_last_ai_quote(raw)
-            fb = get_fallback(args.mode, args.short)
-            if raw == fb:
+            if raw == SINGLE_FALLBACK:
                 used_fallback = True
+            else:
+                copy_to_clipboard(raw)
+                save_last_ai_quote(raw)
 
     if used_fallback:
         try:
