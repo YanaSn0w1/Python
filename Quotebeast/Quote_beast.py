@@ -154,7 +154,7 @@ BANNED_PHRASES = {
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
 OUTPUT_RULES = (
-    "- Not poetic, not robotic.\n"
+    "- Non poetic/robotic.\n"
     "- Never use anyone's name.\n"
 )
 
