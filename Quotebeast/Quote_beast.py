@@ -22,7 +22,7 @@ FALLBACK_MODEL = "llama-3.1-8b-instant"
 
 LAST_MODE_FILE = "last_mode.txt"
 LAST_AI_QUOTE_FILE = "last_ai_quotes.txt"
-HISTORY_SIZE = 10
+HISTORY_SIZE = 20
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 COLORS = {"header": "\033[96m", "text": "\033[97m", "reset": "\033[0m"}
 
@@ -94,6 +94,10 @@ def sanitize_context(ctx, max_chars=120):
         return ""
     ctx = re.sub(r'@\w+', '', ctx)
     ctx = re.sub(r'https?://\S+|pic\.\S+', '', ctx)
+    # Strip emoji
+    ctx = re.sub(
+        r'[\U0001F300-\U0001FAFF\U0001F900-\U0001F9FF\U00002600-\U000027BF\uFE0F]',
+        '', ctx, flags=re.UNICODE)
     ctx = ' '.join(ctx.split()).strip()
     return ctx[:max_chars]
 
@@ -134,6 +138,9 @@ def save_last_ai_quote(text):
         pass
 
 
+# Words permanently banned from all outputs
+BANNED_WORDS = {'sunshine'}
+
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
 OUTPUT_RULES = (
@@ -151,7 +158,21 @@ def build_messages(mode, comment_context="", short=False, recent=None):
     mode = (mode or "hot").strip().lower()
     limit = "max 8 words" if short else "max 15 words"
     context = f"\n\nReact to this: \"{comment_context}\"" if comment_context else ""
-    avoid = f"\nDo not repeat or rephrase any of these: {recent[-5:]}" if recent else ""
+    if recent:
+        # Extract all significant words from history to block
+        stopwords = {'a','an','the','and','or','but','in','on','at','to','for',
+                     'of','with','is','it','its','i','you','we','they','he','she',
+                     'my','your','our','their','be','are','was','were','not','no',
+                     'so','do','did','have','has','had','this','that','these','those'}
+        blocked = set()
+        for q in recent:
+            for w in re.findall(r"[a-zA-Z']+", q.lower()):
+                if w not in stopwords:
+                    blocked.add(w)
+        blocked_list = sorted(blocked)
+        avoid = f"\nDo not use any of these words: {', '.join(blocked_list)}" if blocked_list else ""
+    else:
+        avoid = ""
 
     personas = {
         "hot":   f"Write ONE savage hot take ({limit}). Brutal, sarcastic, contradicts popular belief.\n",
@@ -220,9 +241,20 @@ def looks_like_assistant(s):
 
 def ai_line(mode, comment_context="", short=False):
     mode = (mode or "hot").strip().lower()
-    max_words = 7 if short else 12
+    max_words = 10 if short else 15
     model = MAIN_MODEL
     recent = get_recent_quotes()
+
+    stopwords = {'a','an','the','and','or','but','in','on','at','to','for',
+                 'of','with','is','it','its','i','you','we','they','he','she',
+                 'my','your','our','their','be','are','was','were','not','no',
+                 'so','do','did','have','has','had','this','that','these','those'}
+    # Build blocked word set from last 5 outputs only (20 would block too much)
+    blocked = set()
+    for q in recent[-5:]:
+        for w in re.findall(r"[a-zA-Z]+", q.lower()):
+            if w not in stopwords:
+                blocked.add(w)
 
     for attempt in range(8):
         try:
@@ -252,6 +284,12 @@ def ai_line(mode, comment_context="", short=False):
                 with open(_path("debug_api.txt"), "a", encoding="utf-8") as dbg:
                     err = resp_json.get("error", "")
                     dbg.write(f"attempt={attempt} model={model} status={r.status_code} temp={temp:.2f} err={repr(err)} raw={repr(raw[:100])}\n")
+                # Keep only last 20 lines
+                with open(_path("debug_api.txt"), "r", encoding="utf-8") as dbg:
+                    lines = dbg.readlines()
+                if len(lines) > 20:
+                    with open(_path("debug_api.txt"), "w", encoding="utf-8") as dbg:
+                        dbg.writelines(lines[-20:])
             except Exception:
                 pass
 
@@ -271,11 +309,13 @@ def ai_line(mode, comment_context="", short=False):
                 continue
 
             words = len(text.split())
-            # Fingerprint: first 4 words to catch pattern loops like "It's going to be..."
             fingerprint = ' '.join(text.lower().split()[:4])
             recent_fingerprints = [' '.join(q.lower().split()[:4]) for q in recent]
             is_dup = text.lower() in [q.lower() for q in recent] or fingerprint in recent_fingerprints
-            if 1 <= words <= max_words and not is_dup:
+            # Hard reject if any blocked word appears in output
+            output_words = set(re.findall(r"[a-zA-Z]+", text.lower()))
+            has_blocked = bool(output_words & blocked) or bool(output_words & BANNED_WORDS)
+            if 1 <= words <= max_words and not is_dup and not has_blocked:
                 return text
 
             try:
@@ -316,12 +356,15 @@ def main():
     if args.mode is None:
         args.mode = get_last_mode()
 
+    # Ensure last_mode.txt exists
+    save_last_mode(args.mode)
+
     print(f"{COLORS['header']}AI QUOTE BEAST — Mode: {args.mode} — {datetime.now().strftime('%H:%M')}{COLORS['reset']}\n")
 
     clipboard_text = get_clipboard()
     last_ai = get_last_ai_quote()
 
-    if args.blind or not clipboard_text or clipboard_text.strip() == last_ai.strip() or args.number > 1:
+    if args.blind or not clipboard_text or clipboard_text.strip().replace('\r\n', '\n') == last_ai.strip().replace('\r\n', '\n') or args.number > 1:
         comment_context = ""
     else:
         comment_context = sanitize_context(clipboard_text)
