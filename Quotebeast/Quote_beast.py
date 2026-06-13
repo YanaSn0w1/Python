@@ -139,19 +139,23 @@ def save_last_ai_quote(text):
 
 
 # Words permanently banned from all outputs
-BANNED_WORDS = {'sunshine'}
+BANNED_WORDS = {
+    'sunshine',
+    'follow', 'retweet', 'quote', 'subscribe', 'comment', 'like',
+    'share', 'engage', 'engagement', 'notification', 'notifications',
+    'dm', 'dms', 'inbox', 'collab', 'collaboration',
+}
+
+BANNED_PHRASES = {
+    'drop a', 'drop your', 'let me know', 'sounds like', 'tag a',
+    'tell me', 'hit the', 'click the', 'link in', 'looks like',
+}
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
 OUTPUT_RULES = (
-    "RULES:\n"
-    "- Output EXACTLY ONE sentence. Stop after it.\n"
-    "- Plain text only. No emojis, no markdown, no quotes.\n"
+    "- Not poetic, not robotic.\n"
     "- Never use anyone's name.\n"
-    "- Use contractions (I'd, don't, it's).\n"
-    "- End the sentence when it's complete. Never add filler words at the end.\n"
-    "- Never start with 'It's going to', 'It is going to', 'It's time', 'It's all about'.\n"
-    "- Avoid starting with weak pronouns like 'It' or 'They' — use a strong subject or no subject.\n"
 )
 
 def build_messages(mode, comment_context="", short=False, recent=None):
@@ -175,14 +179,18 @@ def build_messages(mode, comment_context="", short=False, recent=None):
         avoid = ""
 
     personas = {
-        "hot":   f"Write ONE savage hot take ({limit}). Brutal, sarcastic, contradicts popular belief.\n",
+        "hot":   f"Write ONE punchy hot take ({limit}). Edgy and direct, never rude or insulting.\n",
         "boost": f"Write ONE grounded motivational sentence ({limit}). Honest, no fluff.\n",
         "flirt": f"Write ONE punchy social reply ({limit}). Match the energy — hype, warm, or witty.\n",
         "stoic": f"Write ONE stoic sentence ({limit}). Detached, factual. Like 'You control X, not Y'.\n",
     }
     persona = personas.get(mode, f"Write ONE sharp original sentence ({limit}).\n")
-    system = persona + OUTPUT_RULES
-    user = f"Write the sentence now.{context}{avoid}"
+    banned_str = ', '.join(sorted(BANNED_WORDS | {'drop a', 'let me know', 'tag a'}))
+    system = persona + OUTPUT_RULES + f"- Never use: {banned_str}.\n"
+    if comment_context:
+        user = f"React to this specifically: \"{comment_context}\"\nWrite ONE sentence in response. Stay on topic.{avoid}"
+    else:
+        user = f"Write the sentence now.{avoid}"
 
     return [
         {"role": "system", "content": system},
@@ -314,7 +322,13 @@ def ai_line(mode, comment_context="", short=False):
             is_dup = text.lower() in [q.lower() for q in recent] or fingerprint in recent_fingerprints
             # Hard reject if any blocked word appears in output
             output_words = set(re.findall(r"[a-zA-Z]+", text.lower()))
-            has_blocked = bool(output_words & blocked) or bool(output_words & BANNED_WORDS)
+            text_lower = text.lower()
+            has_blocked = (
+                bool(output_words & BANNED_WORDS) or
+                any(p in text_lower for p in BANNED_PHRASES)
+            )
+            if comment_context is None or comment_context == "":
+                has_blocked = has_blocked or bool(output_words & blocked)
             if 1 <= words <= max_words and not is_dup and not has_blocked:
                 return text
 
