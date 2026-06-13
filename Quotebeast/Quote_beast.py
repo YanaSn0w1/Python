@@ -41,7 +41,10 @@ def get_clipboard():
                 capture_output=True, text=True, encoding='utf-8',
                 errors='replace', timeout=2
             )
-            return result.stdout.strip()
+            text = result.stdout.strip()
+            # Remove ?? placeholders left by emoji encoding
+            text = re.sub(r'\?{2,}', '', text).strip()
+            return text
     except Exception:
         pass
     return ""
@@ -93,11 +96,11 @@ def sanitize_context(ctx, max_chars=120):
     if not ctx:
         return ""
     ctx = re.sub(r'@\w+', '', ctx)
-    ctx = re.sub(r'https?://\S+|pic\.\S+', '', ctx)
-    # Strip emoji
-    ctx = re.sub(
-        r'[\U0001F300-\U0001FAFF\U0001F900-\U0001F9FF\U00002600-\U000027BF\uFE0F]',
-        '', ctx, flags=re.UNICODE)
+    ctx = re.sub(r'https?://\S+', '', ctx)
+    ctx = re.sub(r'\bx\.com/\S+', '', ctx)
+    # Strip all emoji and non-ASCII
+    ctx = ctx.encode('ascii', errors='ignore').decode('ascii')
+    ctx = re.sub(r'\?{2,}', '', ctx)
     ctx = ' '.join(ctx.split()).strip()
     return ctx[:max_chars]
 
@@ -181,7 +184,10 @@ def build_messages(mode, comment_context="", short=False, recent=None):
     personas = {
         "hot":   f"Write ONE punchy hot take ({limit}). Edgy and direct, never rude or insulting.\n",
         "boost": f"Write ONE grounded motivational sentence ({limit}). Honest, no fluff.\n",
-        "flirt": f"Write ONE punchy social reply ({limit}). Match the energy — hype, warm, or witty.\n",
+        "flirt": (
+            f"You are YanaHeat on X. Vibe: real, positive, hustling quietly, supportive. "
+            f"Write ONE reply ({limit}). Keep it genuine, no cringe.\n"
+        ),
         "stoic": f"Write ONE stoic sentence ({limit}). Detached, factual. Like 'You control X, not Y'.\n",
     }
     persona = personas.get(mode, f"Write ONE sharp original sentence ({limit}).\n")
@@ -237,7 +243,8 @@ def force_single_sentence(text):
     if match:
         text = match.group(1).strip()
     text = re.sub(r'\s*(System|Assistant|Note|Explanation|I hope).*', '', text, flags=re.I)
-    return text.strip().strip('"\'')
+    text = re.sub(r'\?{2,}', '', text).strip()
+    return text.strip().strip('"\'').strip()
 
 def looks_like_assistant(s):
     if not s:
