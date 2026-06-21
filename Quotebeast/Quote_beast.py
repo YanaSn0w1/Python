@@ -100,6 +100,8 @@ def sanitize_context(ctx, max_chars=120):
     ctx = re.sub(r'\bx\.com/\S+', '', ctx)
     ctx = ctx.encode('ascii', errors='ignore').decode('ascii')
     ctx = re.sub(r'\?{2,}', '', ctx)
+    ctx = re.sub(r'\.{2,}', '.', ctx)
+    ctx = re.sub(r'[^\w\s.,!?\'-]', '', ctx)
     ctx = ' '.join(ctx.split()).strip()
     return ctx[:max_chars]
 
@@ -141,14 +143,14 @@ def save_last_ai_quote(text):
 
 
 BANNED_WORDS = {
-    'sunshine', 'wishing',
+    'sunshine',
     'follow', 'retweet', 'subscribe', 'engage', 'engagement',
     'notification', 'notifications', 'dm', 'dms', 'inbox',
     'collab', 'collaboration',
 }
 
 BANNED_PHRASES = {
-    'drop a', 'drop your', 'let me know', 'sounds like', 'tag a',
+    'drop a', 'drop your', 'let me know', 'tag a',
     'tell me', 'hit the', 'click the', 'link in', 'looks like',
 }
 
@@ -364,32 +366,15 @@ def main():
     if comment_context:
         print(f"{COLORS['header']}Context: \"{comment_context[:60]}\"{COLORS['reset']}\n")
 
-    fallback_flag = _path("last_was_fallback.txt")
-    try:
-        os.remove(fallback_flag)
-    except Exception:
-        pass
-
-    used_fallback = False
     for i in range(max(1, args.number)):
         if i > 0:
             print()
         current_context = comment_context if i == 0 else ""
         colored, raw = generate_line(args.mode, current_context, args.short)
         print(colored)
-        if raw and i == max(1, args.number) - 1:
-            if raw == SINGLE_FALLBACK:
-                used_fallback = True
-            else:
-                copy_to_clipboard(raw)
-                save_last_ai_quote(raw)
-
-    if used_fallback:
-        try:
-            with open(fallback_flag, "w", encoding="utf-8") as f:
-                f.write("1")
-        except Exception:
-            pass
+        if raw and raw != SINGLE_FALLBACK and i == max(1, args.number) - 1:
+            copy_to_clipboard(raw)
+            save_last_ai_quote(raw)
 
     save_last_mode(args.mode)
 
