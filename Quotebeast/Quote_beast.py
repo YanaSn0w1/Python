@@ -3,6 +3,7 @@ import random
 import argparse
 import sys
 import re
+import unicodedata
 from datetime import datetime
 import requests
 import os
@@ -17,8 +18,9 @@ if not GROQ_API_KEY:
     raise ValueError("GROQ_API_KEY not set")
 
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
-MAIN_MODEL = "llama-3.3-70b-versatile"
-FALLBACK_MODEL = "llama-3.1-8b-instant"
+
+MAIN_MODEL = "qwen/qwen3.6-27b"
+FALLBACK_MODEL = "openai/gpt-oss-20b"
 
 LAST_MODE_FILE = "last_mode.txt"
 LAST_AI_QUOTE_FILE = "last_ai_quotes.txt"
@@ -36,18 +38,32 @@ def is_windows():
     return platform.system().lower().startswith("win")
 
 def get_clipboard():
-    try:
-        if is_windows():
+    if is_windows():
+        try:
+            import win32clipboard
+            win32clipboard.OpenClipboard()
+            try:
+                data = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+            finally:
+                win32clipboard.CloseClipboard()
+            text = (data or "").strip()
+            text = re.sub(r'\?{2,}', '', text).strip()
+            return text
+        except Exception:
+            pass
+
+        try:
             result = subprocess.run(
-                ['powershell', '-Command', 'Get-Clipboard'],
+                ['powershell', '-NoProfile', '-Command',
+                 '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Clipboard -Raw'],
                 capture_output=True, text=True, encoding='utf-8',
                 errors='replace', timeout=2
             )
             text = result.stdout.strip()
             text = re.sub(r'\?{2,}', '', text).strip()
             return text
-    except Exception:
-        pass
+        except Exception:
+            pass
     return ""
 
 def copy_to_clipboard(text):
@@ -98,6 +114,7 @@ def sanitize_context(ctx, max_chars=120):
     ctx = re.sub(r'@\w+', '', ctx)
     ctx = re.sub(r'https?://\S+', '', ctx)
     ctx = re.sub(r'\bx\.com/\S+', '', ctx)
+    ctx = unicodedata.normalize('NFKD', ctx)
     ctx = ctx.encode('ascii', errors='ignore').decode('ascii')
     ctx = re.sub(r'\?{2,}', '', ctx)
     ctx = re.sub(r'\.{2,}', '.', ctx)
@@ -157,6 +174,10 @@ BANNED_PHRASES = {
 OUTPUT_RULES = (
     "- Non poetic/robotic.\n"
     "- Never use anyone's name.\n"
+    "- Always write a complete sentence that ends with a period.\n"
+    "- Use natural contractions (it's, you're, don't, I'm, etc.).\n"
+    "- Use correct grammar at all times.\n"
+    "- Never just rephrase or copy the original post. Make a real reply.\n"
 )
 
 TRAILING_FILLER = re.compile(
@@ -184,7 +205,7 @@ def get_fallback(mode=None, short=False):
 
 def build_messages(mode, comment_context="", short=False, recent=None):
     mode = (mode or "hot").strip().lower()
-    limit = "max 8 words" if short else "max 15 words"
+    limit = "1-11 words" if short else "14-25 words"
 
     if recent:
         stopwords = {'a','an','the','and','or','but','in','on','at','to','for',
@@ -203,24 +224,28 @@ def build_messages(mode, comment_context="", short=False, recent=None):
 
     personas = {
         "hot": (
-            f"You are YonaHeet. Write ONE hot take ({limit}) that boldly contradicts "
-            f"a common belief. Blunt, punchy, never rude or insulting.\n"
+            f"You are YonaHeet. Write a hot take ({limit}) that contradicts "
+            f"a common belief. Original, Punchy, Blunt.\n"
         ),
         "boost": f"Write ONE grounded motivational sentence ({limit}). Honest, no fluff.\n",
         "flirt": (
             f"You are YanaHeat on X. Vibe: real, positive, hustling quietly, supportive. "
-            f"Write ONE reply ({limit}). Keep it genuine, no cringe.\n"
+            f"Write ONE complete reply ({limit}). Keep it genuine, no cringe.\n"
         ),
         "stoic": f"Write ONE stoic sentence ({limit}). Detached, factual. Like 'You control X, not Y'.\n",
     }
     persona = personas.get(mode, f"Write ONE sharp original sentence ({limit}).\n")
     banned_str = ', '.join(sorted(BANNED_WORDS | {'drop a', 'let me know', 'tag a'}))
-    system = persona + OUTPUT_RULES + f"- Never use: {banned_str}.\n"
+    system = (
+        persona + OUTPUT_RULES +
+        f"- Never use: {banned_str}.\n"
+        "- Output ONLY the final complete sentence. Nothing else. No thinking, no tags.\n"
+    )
 
     if comment_context:
-        user = f"React to this specifically: \"{comment_context}\"\nWrite ONE sentence in response. Stay on topic.{avoid}"
+        user = f"React to this specifically: \"{comment_context}\"\nWrite ONE original, natural reply. Do not copy or closely rephrase the original. Stay on topic.{avoid}"
     else:
-        user = f"Write the sentence now.{avoid}"
+        user = f"Write the complete sentence now.{avoid}"
 
     return [
         {"role": "system", "content": system},
@@ -231,15 +256,27 @@ def build_messages(mode, comment_context="", short=False, recent=None):
 def force_single_sentence(text):
     if not text:
         return ""
-    for line in text.splitlines():
-        line = line.strip()
-        if line:
-            text = line
-            break
-    match = re.search(r'^(.+?[.!?])(\s|$)', text)
-    if match:
-        text = match.group(1).strip()
-    text = re.sub(r'\s*(System|Assistant|Note|Explanation|I hope).*', '', text, flags=re.I)
+    # Remove all thinking / reasoning
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'</?think>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'<reasoning>.*?</reasoning>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"Here's a thinking process:.*", '', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'^thinking process:.*', '', text, flags=re.IGNORECASE | re.DOTALL)
+
+    # Prefer the longest complete sentence
+    sentences = re.findall(r'[^.!?]*[.!?]', text)
+    if sentences:
+        # Take the last complete one (usually the actual answer)
+        text = sentences[-1].strip()
+    else:
+        # Fallback: first non-empty line
+        for line in text.splitlines():
+            line = line.strip()
+            if line and not line.startswith(('<', '[')):
+                text = line
+                break
+
+    text = re.sub(r'\s*\b(System|Assistant|Note|Explanation|I hope)\b.*', '', text, flags=re.I)
     text = re.sub(r'\?{2,}', '', text).strip()
     return text.strip().strip('"\'').strip()
 
@@ -247,7 +284,7 @@ def looks_like_assistant(s):
     if not s:
         return True
     bad = ["i'm here to help", "as an ai", "as an assistant", "i can help",
-           "let me know", "system:", "assistant:"]
+           "let me know", "system:", "assistant:", "here's a thinking", "thinking process"]
     return any(p in s.lower() for p in bad)
 
 def write_debug(line):
@@ -264,24 +301,32 @@ def write_debug(line):
 
 def ai_line(mode, comment_context="", short=False):
     mode = (mode or "hot").strip().lower()
-    max_words = 10 if short else 15
+    max_words = 11 if short else 25
     model = MAIN_MODEL
     recent = get_recent_quotes()
 
     for attempt in range(8):
         try:
             messages = build_messages(mode, comment_context, short, recent=recent)
-            temp = min(0.7 + attempt * 0.07, 1.3)
+            temp = min(0.65 + attempt * 0.06, 1.15)
+
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": temp,
+                "max_completion_tokens": 150,
+                "top_p": 0.9,
+            }
+
+            # Model-specific reasoning setting
+            if "qwen" in model:
+                payload["reasoning_effort"] = "none"
+            else:
+                payload["reasoning_effort"] = "low"   # safe for gpt-oss
+
             r = requests.post(
                 API_URL,
-                json={
-                    "model": model,
-                    "messages": messages,
-                    "temperature": temp,
-                    "max_tokens": 35,
-                    "top_p": 0.9,
-                    "stop": ["\n", "System:", "Assistant:", "Note:"],
-                },
+                json=payload,
                 headers={
                     "Authorization": f"Bearer {GROQ_API_KEY}",
                     "Content-Type": "application/json"
@@ -290,9 +335,11 @@ def ai_line(mode, comment_context="", short=False):
             )
 
             resp_json = r.json()
-            raw = resp_json.get("choices", [{}])[0].get("message", {}).get("content", "")
+            message = resp_json.get("choices", [{}])[0].get("message", {})
+            raw = (message.get("content") or message.get("reasoning_content") or "").strip()
             err = resp_json.get("error", "")
-            write_debug(f"attempt={attempt} model={model} status={r.status_code} temp={temp:.2f} err={repr(err)} raw={repr(raw[:100])}")
+
+            write_debug(f"attempt={attempt} model={model} status={r.status_code} temp={temp:.2f} err={repr(err)} raw={repr(raw[:400])}")
 
             if r.status_code == 429:
                 model = FALLBACK_MODEL
@@ -319,7 +366,11 @@ def ai_line(mode, comment_context="", short=False):
                 bool(output_words & BANNED_WORDS) or
                 any(p in text_lower for p in BANNED_PHRASES)
             )
-            if 1 <= words <= max_words and not is_dup and not has_blocked:
+            # Must be a real sentence (min 5 words) and not cut off
+            if (5 <= words <= max_words and 
+                not is_dup and 
+                not has_blocked and 
+                text.endswith(('.', '!', '?'))):
                 return text
 
             write_debug(f"  REJECTED: words={words} max={max_words} dup={is_dup} banned={has_blocked} text={repr(text)}")
@@ -362,6 +413,10 @@ def main():
         comment_context = ""
     else:
         comment_context = sanitize_context(clipboard_text)
+
+    write_debug(f"CONTEXT raw_clipboard={clipboard_text!r}")
+    write_debug(f"CONTEXT raw_codepoints={[hex(ord(c)) for c in clipboard_text[:30]]!r}")
+    write_debug(f"CONTEXT sanitized={comment_context!r}")
 
     if comment_context:
         print(f"{COLORS['header']}Context: \"{comment_context[:60]}\"{COLORS['reset']}\n")
