@@ -20,7 +20,11 @@ if not GROQ_API_KEY:
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 MAIN_MODEL = "qwen/qwen3.6-27b"
-FALLBACK_MODEL = "openai/gpt-oss-20b"
+FALLBACK_MODELS = [
+    "groq/compound",
+    "groq/compound-mini",
+    "allam-2-7b",
+]
 
 LAST_MODE_FILE = "last_mode.txt"
 LAST_AI_QUOTE_FILE = "last_ai_quotes.txt"
@@ -108,7 +112,7 @@ def clean_text(text):
     text = text.lstrip(' -\u2013\u2014\u2022*#0123456789').strip()
     return text
 
-def sanitize_context(ctx, max_chars=120):
+def sanitize_context(ctx, max_chars=70):
     if not ctx:
         return ""
     ctx = re.sub(r'@\w+', '', ctx)
@@ -171,20 +175,11 @@ BANNED_PHRASES = {
     'tell me', 'hit the', 'click the', 'link in', 'looks like',
 }
 
-OUTPUT_RULES = (
-    "- Non poetic/robotic.\n"
-    "- Never use anyone's name.\n"
-    "- Always write a complete sentence that ends with a period.\n"
-    "- Use natural contractions (it's, you're, don't, I'm, etc.).\n"
-    "- Use correct grammar at all times.\n"
-    "- Never just rephrase or copy the original post. Make a real reply.\n"
-)
-
 TRAILING_FILLER = re.compile(
     r'\s+(already|somehow|tonight|today|right now|out there|anyhow|'
     r'sometimes|right here|at all|though|actually|literally|basically|'
     r'honestly|truly|really|definitely|absolutely|totally|completely|'
-    r'certainly|clearly|obviously|simply|just|even|still|yet|now|then|'
+    r'certainly|clearly|obviously|simply|just|even|still|yet|then|'
     r'there|here|ever|never|always|often|soon|perhaps|maybe)[.!?]?$',
     re.IGNORECASE
 )
@@ -235,11 +230,14 @@ def build_messages(mode, comment_context="", short=False, recent=None):
         "stoic": f"Write ONE stoic sentence ({limit}). Detached, factual. Like 'You control X, not Y'.\n",
     }
     persona = personas.get(mode, f"Write ONE sharp original sentence ({limit}).\n")
+
     banned_str = ', '.join(sorted(BANNED_WORDS | {'drop a', 'let me know', 'tag a'}))
+
     system = (
-        persona + OUTPUT_RULES +
+        f"{persona}"
+        "- Natural contractions. Correct grammar. Be original.\n"
         f"- Never use: {banned_str}.\n"
-        "- Output ONLY the final complete sentence. Nothing else. No thinking, no tags.\n"
+        "- Output ONLY the sentence. Nothing else.\n"
     )
 
     if comment_context:
@@ -256,28 +254,27 @@ def build_messages(mode, comment_context="", short=False, recent=None):
 def force_single_sentence(text):
     if not text:
         return ""
-    # Remove all thinking / reasoning
+    # Remove thinking / reasoning blocks
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'</?think>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'<reasoning>.*?</reasoning>', '', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"Here's a thinking process:.*", '', text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r'^thinking process:.*', '', text, flags=re.IGNORECASE | re.DOTALL)
 
-    # Prefer the longest complete sentence
-    sentences = re.findall(r'[^.!?]*[.!?]', text)
-    if sentences:
-        # Take the last complete one (usually the actual answer)
-        text = sentences[-1].strip()
-    else:
-        # Fallback: first non-empty line
-        for line in text.splitlines():
-            line = line.strip()
-            if line and not line.startswith(('<', '[')):
-                text = line
-                break
-
+    # Clean up common prefixes
     text = re.sub(r'\s*\b(System|Assistant|Note|Explanation|I hope)\b.*', '', text, flags=re.I)
     text = re.sub(r'\?{2,}', '', text).strip()
+
+    # Get all complete sentences
+    sentences = re.findall(r'[^.!?]+[.!?]?', text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+
+    if not sentences:
+        return text.strip().strip('"\'').strip()
+
+    # Prefer the longest sentence (usually the real reply)
+    text = max(sentences, key=lambda s: len(s.split()))
+
     return text.strip().strip('"\'').strip()
 
 def looks_like_assistant(s):
@@ -302,7 +299,9 @@ def write_debug(line):
 def ai_line(mode, comment_context="", short=False):
     mode = (mode or "hot").strip().lower()
     max_words = 11 if short else 25
+    min_words = 1 if short else 4
     model = MAIN_MODEL
+    fallback_index = 0
     recent = get_recent_quotes()
 
     for attempt in range(8):
@@ -314,7 +313,7 @@ def ai_line(mode, comment_context="", short=False):
                 "model": model,
                 "messages": messages,
                 "temperature": temp,
-                "max_completion_tokens": 150,
+                "max_completion_tokens": 50 if short else 60,
                 "top_p": 0.9,
             }
 
@@ -322,7 +321,7 @@ def ai_line(mode, comment_context="", short=False):
             if "qwen" in model:
                 payload["reasoning_effort"] = "none"
             else:
-                payload["reasoning_effort"] = "low"   # safe for gpt-oss
+                payload["reasoning_effort"] = "low"
 
             r = requests.post(
                 API_URL,
@@ -341,13 +340,16 @@ def ai_line(mode, comment_context="", short=False):
 
             write_debug(f"attempt={attempt} model={model} status={r.status_code} temp={temp:.2f} err={repr(err)} raw={repr(raw[:400])}")
 
-            if r.status_code == 429:
-                model = FALLBACK_MODEL
-                time.sleep(0.5)
-                continue
-            if r.status_code == 400:
-                model = FALLBACK_MODEL
-                continue
+            if r.status_code in (429, 400) or (not raw and model != MAIN_MODEL):
+                # Switch to next fallback
+                if fallback_index < len(FALLBACK_MODELS):
+                    model = FALLBACK_MODELS[fallback_index]
+                    fallback_index += 1
+                    time.sleep(0.4)
+                    continue
+                else:
+                    # All fallbacks exhausted
+                    break
 
             text = force_single_sentence(raw)
             text = clean_text(text)
@@ -366,8 +368,8 @@ def ai_line(mode, comment_context="", short=False):
                 bool(output_words & BANNED_WORDS) or
                 any(p in text_lower for p in BANNED_PHRASES)
             )
-            # Must be a real sentence (min 5 words) and not cut off
-            if (5 <= words <= max_words and 
+
+            if (min_words <= words <= max_words and 
                 not is_dup and 
                 not has_blocked and 
                 text.endswith(('.', '!', '?'))):
