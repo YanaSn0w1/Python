@@ -19,27 +19,17 @@ pip install requests
 
 ## Setup
 
-1. Set your Groq API key in powershell permanently.
+1. Set your Gemini and Groq API key in powershell permanently.
+ ```ps1
+   $env:GEMINI_API_KEY = "Your_API_Key_Here"
+   [Environment]::SetEnvironmentVariable("GEMINI_API_KEY", "Your_API_Key_Here", "User")
+   ```
  ```ps1
    $env:GROQ_API_KEY = "Your_API_Key_Here"
    [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_API_Key_Here", "User")
    ```
 
-2. Optional - Permanently set in Windows without Powershell. 
-- Search Windows for “Edit the system environment variables”  
-- Click Environment Variables button  
-- Under User variables (or System variables if you want it for all users), click New…  
-- Variable name: GROQ_API_KEY  
-- Variable value: paste your real Groq key  
-- Click OK on everything
-- After doing either of the above, restart PowerShell (or log out/in).
-
-3. Optional - You can see your key with:
-```ps1
-$env:GROQ_API_KEY
-```
-
-4. Powershell Optional - Check if Groq models are online
+2. Powershell Optional - Check if Groq models are online
 ```ps1
 $headers = @{ "Authorization" = "Bearer $env:GROQ_API_KEY" }
 
@@ -51,7 +41,7 @@ Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" -Headers $headers
     Format-Table -AutoSize
 ```
 
-5. Powershell Optional - test every single model that appeared in your list.
+3. Powershell Optional - test every single model that appeared in your list.
 ```ps1
 $headers = @{
     "Authorization" = "Bearer $env:GROQ_API_KEY"
