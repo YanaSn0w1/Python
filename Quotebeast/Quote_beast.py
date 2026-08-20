@@ -14,13 +14,14 @@ import time
 sys.stdout.reconfigure(encoding='utf-8')
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY   = os.getenv("GROQ_API_KEY")
 
-if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY not set")
+# Only require a key if we actually need it
+if not GEMINI_API_KEY and not GROQ_API_KEY:
+    raise ValueError("Neither GEMINI_API_KEY nor GROQ_API_KEY is set")
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
 
 MAIN_MODEL = "gemini-3.5-flash-lite"
 FALLBACK_MODELS = [
@@ -391,7 +392,7 @@ def ai_line(mode, comment_context="", short=False):
                     payload["reasoning_effort"] = "none"
 
                 r = requests.post(
-                    API_URL,
+                    GROQ_URL,
                     json=payload,
                     headers={
                         "Authorization": f"Bearer {GROQ_API_KEY}",
