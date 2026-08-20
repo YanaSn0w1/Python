@@ -52,7 +52,7 @@ Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" `
 ```
 
 5. Powershell Optional - test every single model that appeared in your list.
-```
+```ps1
 $headers = @{
     "Authorization" = "Bearer $env:GROQ_API_KEY"
     "Content-Type"  = "application/json"
