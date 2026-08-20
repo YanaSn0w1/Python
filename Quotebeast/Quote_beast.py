@@ -14,20 +14,24 @@ import time
 sys.stdout.reconfigure(encoding='utf-8')
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
 if not GROQ_API_KEY:
     raise ValueError("GROQ_API_KEY not set")
 
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
-MAIN_MODEL = "qwen/qwen3.6-27b"
+MAIN_MODEL = "gemini-3.5-flash-lite"
 FALLBACK_MODELS = [
-    "groq/compound",
-    "groq/compound-mini",
+    "qwen/qwen3.6-27b",
     "allam-2-7b",
 ]
+ALL_MODELS = [MAIN_MODEL] + FALLBACK_MODELS
 
 LAST_MODE_FILE = "last_mode.txt"
 LAST_AI_QUOTE_FILE = "last_ai_quotes.txt"
+PREFERRED_MODEL_FILE = "preferred_model.txt"
 HISTORY_SIZE = 10
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 COLORS = {"header": "\033[96m", "text": "\033[97m", "reset": "\033[0m"}
@@ -116,7 +120,6 @@ def sanitize_context(ctx, max_chars=111):
     if not ctx:
         return ""
     
-    # First convert smart quotes/apostrophes to straight ones
     ctx = ctx.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
     ctx = ctx.replace("–", "-").replace("—", "-")
     
@@ -169,6 +172,23 @@ def save_last_ai_quote(text):
     except Exception:
         pass
 
+def get_preferred_model():
+    try:
+        with open(_path(PREFERRED_MODEL_FILE), "r", encoding="utf-8") as f:
+            m = f.read().strip()
+            if m in ALL_MODELS:
+                return m
+    except Exception:
+        pass
+    return MAIN_MODEL
+
+def save_preferred_model(model):
+    try:
+        with open(_path(PREFERRED_MODEL_FILE), "w", encoding="utf-8") as f:
+            f.write(model)
+    except Exception:
+        pass
+
 
 BANNED_WORDS = {
     'sunshine',
@@ -198,7 +218,6 @@ def strip_trailing_filler(text):
             break
         text = cleaned
 
-    # Remove trailing period right after an emoji
     text = re.sub(r'([^\w\s])\.$', r'\1', text)
 
     if text and text[-1] not in '.!?' and not re.search(r'[\U0001F300-\U0001F9FF]$', text):
@@ -267,7 +286,6 @@ def build_messages(mode, comment_context="", short=False, recent=None):
 def force_single_sentence(text):
     if not text:
         return ""
-    # Light cleaning only — no longer forces a single sentence
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'</?think>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'<reasoning>.*?</reasoning>', '', text, flags=re.DOTALL | re.IGNORECASE)
@@ -297,68 +315,119 @@ def write_debug(line):
     except Exception:
         pass
 
+
+def call_gemini(model, messages, temp, max_tokens):
+    if not GEMINI_API_KEY:
+        return None, "GEMINI_API_KEY not set", 400
+
+    # Convert OpenAI-style messages to Gemini format
+    contents = []
+    system_instruction = None
+    for msg in messages:
+        if msg["role"] == "system":
+            system_instruction = msg["content"]
+        else:
+            contents.append({"role": "user", "parts": [{"text": msg["content"]}]})
+
+    payload = {
+        "contents": contents,
+        "generationConfig": {
+            "temperature": temp,
+            "maxOutputTokens": max_tokens,
+            "topP": 0.9,
+        }
+    }
+    if system_instruction:
+        payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+
+    url = GEMINI_URL.format(model=model) + f"?key={GEMINI_API_KEY}"
+    r = requests.post(url, json=payload, timeout=30)
+    
+    try:
+        data = r.json()
+    except Exception:
+        return None, "Invalid JSON from Gemini", r.status_code
+
+    if r.status_code != 200:
+        err = data.get("error", {}).get("message", str(data))
+        return None, err, r.status_code
+
+    try:
+        raw = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        return raw, "", 200
+    except Exception:
+        return None, "No content in Gemini response", 200
+
+
 def ai_line(mode, comment_context="", short=False):
     mode = (mode or "hot").strip().lower()
-    max_words = 11 if short else 25
+    max_words = 13 if short else 25
     min_words = 1 if short else 4
-    model = MAIN_MODEL
-    fallback_index = 0
     recent = get_recent_quotes()
 
-    for attempt in range(8):
+    preferred = get_preferred_model()
+    models_to_try = [preferred] + [m for m in ALL_MODELS if m != preferred]
+
+    for attempt in range(6):
+        model = models_to_try[attempt % len(models_to_try)]
+        is_gemini = model.startswith("gemini")
+
         try:
             messages = build_messages(mode, comment_context, short, recent=recent)
-            temp = min(0.65 + attempt * 0.06, 1.15)
+            temp = min(0.65 + attempt * 0.08, 1.1)
+            max_tokens = 50 if short else 60
 
-            payload = {
-                "model": model,
-                "messages": messages,
-                "temperature": temp,
-                "max_completion_tokens": 50 if short else 60,
-                "top_p": 0.9,
-            }
+            if is_gemini:
+                raw, err_msg, status = call_gemini(model, messages, temp, max_tokens)
+            else:
+                payload = {
+                    "model": model,
+                    "messages": messages,
+                    "temperature": temp,
+                    "max_completion_tokens": max_tokens,
+                    "top_p": 0.9,
+                }
+                if "qwen" in model:
+                    payload["reasoning_effort"] = "none"
 
-            # Only Qwen supports reasoning_effort
-            if "qwen" in model:
-                payload["reasoning_effort"] = "none"
+                r = requests.post(
+                    API_URL,
+                    json=payload,
+                    headers={
+                        "Authorization": f"Bearer {GROQ_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    timeout=30
+                )
+                resp_json = r.json()
+                message = resp_json.get("choices", [{}])[0].get("message", {})
+                raw = (message.get("content") or message.get("reasoning_content") or "").strip()
+                err = resp_json.get("error", {}) or {}
+                err_msg = err.get("message", "") if isinstance(err, dict) else str(err)
+                status = r.status_code
 
-            r = requests.post(
-                API_URL,
-                json=payload,
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                timeout=30
-            )
+            write_debug(f"attempt={attempt} model={model} status={status} temp={temp:.2f} err={repr(err_msg)[:120]} raw={repr((raw or '')[:200])}")
 
-            resp_json = r.json()
-            message = resp_json.get("choices", [{}])[0].get("message", {})
-            raw = (message.get("content") or message.get("reasoning_content") or "").strip()
-            err = resp_json.get("error", "")
+            # Real failure → switch model
+            if status == 429 or status >= 400 or not raw:
+                write_debug(f"  → switching (real error)")
+                if status == 429:
+                    time.sleep(1.0)
+                continue
 
-            write_debug(f"attempt={attempt} model={model} status={r.status_code} temp={temp:.2f} err={repr(err)} raw={repr(raw[:400])}")
-
-            if r.status_code in (429, 400) or (not raw and model != MAIN_MODEL):
-                if fallback_index < len(FALLBACK_MODELS):
-                    model = FALLBACK_MODELS[fallback_index]
-                    fallback_index += 1
-                    time.sleep(0.4)
-                    continue
-                else:
-                    break
-
+            # Success path
             text = force_single_sentence(raw)
             text = clean_text(text)
             text = strip_trailing_filler(text)
 
             if not text or looks_like_assistant(text):
+                write_debug(f"  → bad text, retry same model")
                 continue
 
             words = len(text.split())
             fingerprint = ' '.join(text.lower().split()[:4])
             recent_fingerprints = [' '.join(q.lower().split()[:4]) for q in recent]
-            is_dup = text.lower() in [q.lower() for q in recent] or fingerprint in recent_fingerprints
+            is_dup = (text.lower() in [q.lower() for q in recent] or fingerprint in recent_fingerprints)
             output_words = set(re.findall(r"[a-zA-Z]+", text.lower()))
             text_lower = text.lower()
             has_blocked = (
@@ -366,14 +435,17 @@ def ai_line(mode, comment_context="", short=False):
                 any(p in text_lower for p in BANNED_PHRASES)
             )
 
-            if (min_words <= words <= max_words and 
-                not is_dup and 
-                not has_blocked and 
+            if (min_words <= words <= max_words and
+                not is_dup and
+                not has_blocked and
                 text.endswith(('.', '!', '?'))):
+
+                save_preferred_model(model)
+                write_debug(f"  ✓ ACCEPTED → {text}")
                 return text
 
-            write_debug(f"  REJECTED: words={words} max={max_words} dup={is_dup} banned={has_blocked} text={repr(text)}")
-            time.sleep(0.2)
+            write_debug(f"  ✗ REJECTED ({words}w) → {text[:50]}")
+            # stay on same model, just try again with higher temp
 
         except Exception as e:
             write_debug(f"attempt={attempt} EXCEPTION={repr(str(e))}")
@@ -414,7 +486,6 @@ def main():
         comment_context = sanitize_context(clipboard_text)
 
     write_debug(f"CONTEXT raw_clipboard={clipboard_text!r}")
-    write_debug(f"CONTEXT raw_codepoints={[hex(ord(c)) for c in clipboard_text[:30]]!r}")
     write_debug(f"CONTEXT sanitized={comment_context!r}")
 
     if comment_context:
