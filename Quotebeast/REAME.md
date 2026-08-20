@@ -29,7 +29,9 @@ pip install requests
    [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_API_Key_Here", "User")
    ```
 
-2. Powershell Optional - Check if Groq models are online
+2. Place `quote_beast.py` in the same folder as `quote_beast.ahk` then run `quote_beast.ahk` as administrator.
+
+3. Powershell Optional - Check if Groq models are online
 ```ps1
 $headers = @{ "Authorization" = "Bearer $env:GROQ_API_KEY" }
 
@@ -41,7 +43,7 @@ Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" -Headers $headers
     Format-Table -AutoSize
 ```
 
-3. Powershell Optional - test every single model that appeared in your list.
+4. Powershell Optional - test every single model that appeared in your list.
 ```ps1
 $headers = @{
     "Authorization" = "Bearer $env:GROQ_API_KEY"
@@ -96,8 +98,6 @@ foreach ($model in $models) {
     }
 }
 ```
-
-6. Place `quote_beast.py` in the same folder as `quote_beast.ahk` then run `quote_beast.ahk` as administrator.
 
 ---
 
