@@ -26,13 +26,17 @@ GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
 MAIN_MODEL = "gemini-3.5-flash-lite"
 FALLBACK_MODELS = [
     "qwen/qwen3.6-27b",
-    "allam-2-7b",
 ]
 ALL_MODELS = [MAIN_MODEL] + FALLBACK_MODELS
+
+# ── Model rotation settings ──────────────────────────────────────────────
+MODEL_SWAP = True          # True = force switch after MODEL_USE successful uses
+MODEL_USE  = 1             # number of successful uses before forced swap
 
 LAST_MODE_FILE = "last_mode.txt"
 LAST_AI_QUOTE_FILE = "last_ai_quotes.txt"
 PREFERRED_MODEL_FILE = "preferred_model.txt"
+MODEL_USAGE_FILE = "model_usage.txt"
 HISTORY_SIZE = 10
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 COLORS = {"header": "\033[96m", "text": "\033[97m", "reset": "\033[0m"}
@@ -190,6 +194,20 @@ def save_preferred_model(model):
     except Exception:
         pass
 
+def get_model_usage():
+    try:
+        with open(_path(MODEL_USAGE_FILE), "r", encoding="utf-8") as f:
+            return int(f.read().strip() or 0)
+    except Exception:
+        return 0
+
+def save_model_usage(count):
+    try:
+        with open(_path(MODEL_USAGE_FILE), "w", encoding="utf-8") as f:
+            f.write(str(count))
+    except Exception:
+        pass
+
 
 BANNED_WORDS = {
     'sunshine',
@@ -212,6 +230,12 @@ TRAILING_FILLER = re.compile(
     re.IGNORECASE
 )
 
+# Accept real emoji or common text smileys as valid endings
+EMOJI_OR_SMILEY = re.compile(
+    r'[\U0001F300-\U0001F9FF\u2600-\u27BF]$|'   # broad emoji ranges
+    r'[:;]-?[)D]$'                              # :) ;) :D etc.
+)
+
 def strip_trailing_filler(text):
     for _ in range(5):
         cleaned = TRAILING_FILLER.sub('', text).strip()
@@ -219,10 +243,8 @@ def strip_trailing_filler(text):
             break
         text = cleaned
 
+    # Just clean accidental "something."  – never force a period
     text = re.sub(r'([^\w\s])\.$', r'\1', text)
-
-    if text and text[-1] not in '.!?' and not re.search(r'[\U0001F300-\U0001F9FF]$', text):
-        text += '.'
     return text
 
 def get_fallback(mode=None, short=False):
@@ -362,15 +384,16 @@ def call_gemini(model, messages, temp, max_tokens):
 
 def ai_line(mode, comment_context="", short=False):
     mode = (mode or "hot").strip().lower()
-    max_words = 13 if short else 25
+    max_words = 11 if short else 25
     min_words = 1 if short else 4
     recent = get_recent_quotes()
 
     preferred = get_preferred_model()
     models_to_try = [preferred] + [m for m in ALL_MODELS if m != preferred]
+    model_idx = 0
 
     for attempt in range(6):
-        model = models_to_try[attempt % len(models_to_try)]
+        model = models_to_try[model_idx % len(models_to_try)]
         is_gemini = model.startswith("gemini")
 
         try:
@@ -407,50 +430,88 @@ def ai_line(mode, comment_context="", short=False):
                 err_msg = err.get("message", "") if isinstance(err, dict) else str(err)
                 status = r.status_code
 
-            write_debug(f"attempt={attempt} model={model} status={status} temp={temp:.2f} err={repr(err_msg)[:120]} raw={repr((raw or '')[:200])}")
+            write_debug(
+                f"attempt={attempt} model={model} status={status} "
+                f"temp={temp:.2f} err={repr(err_msg)[:120]} raw={repr((raw or '')[:200])}"
+            )
 
-            # Real failure → switch model
+            # Real API failure → switch model (rate-limit / error path – kept as-is)
             if status == 429 or status >= 400 or not raw:
-                write_debug(f"  → switching (real error)")
+                write_debug(f"  → switching model (real error)")
                 if status == 429:
                     time.sleep(1.0)
+                model_idx += 1
                 continue
 
-            # Success path
+            # Success path (content validation)
             text = force_single_sentence(raw)
             text = clean_text(text)
             text = strip_trailing_filler(text)
 
             if not text or looks_like_assistant(text):
-                write_debug(f"  → bad text, retry same model")
+                write_debug(f"  → bad text / assistant-like, retry same model")
                 continue
 
             words = len(text.split())
-            fingerprint = ' '.join(text.lower().split()[:4])
-            recent_fingerprints = [' '.join(q.lower().split()[:4]) for q in recent]
-            is_dup = (text.lower() in [q.lower() for q in recent] or fingerprint in recent_fingerprints)
+
+            # ── Smarter duplicate check (only last 3 quotes + 5-word fingerprint) ──
+            recent_for_dup = recent[-3:] if recent else []
+            fingerprint = ' '.join(text.lower().split()[:5])
+            recent_fingerprints = [' '.join(q.lower().split()[:5]) for q in recent_for_dup]
+            is_dup = (
+                text.lower() in [q.lower() for q in recent_for_dup]
+                or fingerprint in recent_fingerprints
+            )
+
             output_words = set(re.findall(r"[a-zA-Z]+", text.lower()))
             text_lower = text.lower()
             has_blocked = (
-                bool(output_words & BANNED_WORDS) or
-                any(p in text_lower for p in BANNED_PHRASES)
+                bool(output_words & BANNED_WORDS)
+                or any(p in text_lower for p in BANNED_PHRASES)
             )
 
-            if (min_words <= words <= max_words and
-                not is_dup and
-                not has_blocked and
-                text.endswith(('.', '!', '?'))):
+            # Accept . ! ?  OR  emoji  OR  text smiley
+            ends_ok = (
+                text.endswith(('.', '!', '?'))
+                or bool(EMOJI_OR_SMILEY.search(text))
+            )
 
+            # Build human-readable rejection reasons
+            reasons = []
+            if not (min_words <= words <= max_words):
+                reasons.append(f"{words}w (need {min_words}-{max_words})")
+            if is_dup:
+                reasons.append("dup")
+            if has_blocked:
+                reasons.append("blocked")
+            if not ends_ok:
+                reasons.append("no end punct")
+
+            if not reasons:                       # everything passed
                 save_preferred_model(model)
+
                 write_debug(f"  ✓ ACCEPTED → {text}")
+
+                # ── Forced rotation after N successful uses (shown AFTER accepted) ──
+                if MODEL_SWAP:
+                    usage = get_model_usage() + 1
+                    if usage >= MODEL_USE:
+                        current_idx = ALL_MODELS.index(model) if model in ALL_MODELS else 0
+                        next_model = ALL_MODELS[(current_idx + 1) % len(ALL_MODELS)]
+                        save_preferred_model(next_model)
+                        usage = 0
+                        write_debug(f"  → forced model swap after {MODEL_USE} uses → {next_model}")
+                    save_model_usage(usage)
+
                 return text
 
-            write_debug(f"  ✗ REJECTED ({words}w) → {text[:50]}")
-            # stay on same model, just try again with higher temp
+            # Quality rejection → stay on same model, just higher temp next time
+            write_debug(f"  ✗ REJECTED ({', '.join(reasons)}) → {text[:60]}")
 
         except Exception as e:
             write_debug(f"attempt={attempt} EXCEPTION={repr(str(e))}")
             time.sleep(0.3)
+            model_idx += 1          # treat exceptions as real errors
 
     return SINGLE_FALLBACK
 
@@ -486,8 +547,8 @@ def main():
     else:
         comment_context = sanitize_context(clipboard_text)
 
-    write_debug(f"CONTEXT raw_clipboard={clipboard_text!r}")
-    write_debug(f"CONTEXT sanitized={comment_context!r}")
+    # Log the sanitized version (what actually goes to the model)
+    write_debug(f"CONTEXT={comment_context!r}")
 
     if comment_context:
         print(f"{COLORS['header']}Context: \"{comment_context[:60]}\"{COLORS['reset']}\n")
