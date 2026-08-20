@@ -112,14 +112,21 @@ def clean_text(text):
     text = text.lstrip(' -\u2013\u2014\u2022*#0123456789').strip()
     return text
 
-def sanitize_context(ctx, max_chars=70):
+def sanitize_context(ctx, max_chars=111):
     if not ctx:
         return ""
+    
+    # First convert smart quotes/apostrophes to straight ones
+    ctx = ctx.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+    ctx = ctx.replace("–", "-").replace("—", "-")
+    
     ctx = re.sub(r'@\w+', '', ctx)
     ctx = re.sub(r'https?://\S+', '', ctx)
     ctx = re.sub(r'\bx\.com/\S+', '', ctx)
+    
     ctx = unicodedata.normalize('NFKD', ctx)
     ctx = ctx.encode('ascii', errors='ignore').decode('ascii')
+    
     ctx = re.sub(r'\?{2,}', '', ctx)
     ctx = re.sub(r'\.{2,}', '.', ctx)
     ctx = re.sub(r'[^\w\s.,!?\'-]', '', ctx)
@@ -190,7 +197,11 @@ def strip_trailing_filler(text):
         if cleaned == text:
             break
         text = cleaned
-    if text and text[-1] not in '.!?':
+
+    # Remove trailing period right after an emoji
+    text = re.sub(r'([^\w\s])\.$', r'\1', text)
+
+    if text and text[-1] not in '.!?' and not re.search(r'[\U0001F300-\U0001F9FF]$', text):
         text += '.'
     return text
 
@@ -235,7 +246,9 @@ def build_messages(mode, comment_context="", short=False, recent=None):
 
     system = (
         f"{persona}"
-        "- Natural contractions. Correct grammar. Be original.\n"
+        "- Natural contractions (I'm, you're, what's, don't, etc.). Perfect grammar.\n"
+        "- Casual everyday language. Sound like a real person texting.\n"
+        "- Prefer periods. Use exclamation marks only when really needed.\n"
         f"- Never use: {banned_str}.\n"
         "- Output ONLY the sentence. Nothing else.\n"
     )
@@ -254,20 +267,16 @@ def build_messages(mode, comment_context="", short=False, recent=None):
 def force_single_sentence(text):
     if not text:
         return ""
-    
-    # Remove thinking / reasoning blocks
+    # Light cleaning only — no longer forces a single sentence
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'</?think>', '', text, flags=re.IGNORECASE)
     text = re.sub(r'<reasoning>.*?</reasoning>', '', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"Here's a thinking process:.*", '', text, flags=re.IGNORECASE | re.DOTALL)
     text = re.sub(r'^thinking process:.*', '', text, flags=re.IGNORECASE | re.DOTALL)
-
-    # Clean up common prefixes
     text = re.sub(r'\s*\b(System|Assistant|Note|Explanation|I hope)\b.*', '', text, flags=re.I)
     text = re.sub(r'\?{2,}', '', text).strip()
-
-    # Just clean quotes and whitespace — keep everything else
     return text.strip().strip('"\'').strip()
+
 
 def looks_like_assistant(s):
     if not s:
@@ -309,11 +318,9 @@ def ai_line(mode, comment_context="", short=False):
                 "top_p": 0.9,
             }
 
-            # Model-specific reasoning setting
+            # Only Qwen supports reasoning_effort
             if "qwen" in model:
                 payload["reasoning_effort"] = "none"
-            else:
-                payload["reasoning_effort"] = "low"
 
             r = requests.post(
                 API_URL,
@@ -333,14 +340,12 @@ def ai_line(mode, comment_context="", short=False):
             write_debug(f"attempt={attempt} model={model} status={r.status_code} temp={temp:.2f} err={repr(err)} raw={repr(raw[:400])}")
 
             if r.status_code in (429, 400) or (not raw and model != MAIN_MODEL):
-                # Switch to next fallback
                 if fallback_index < len(FALLBACK_MODELS):
                     model = FALLBACK_MODELS[fallback_index]
                     fallback_index += 1
                     time.sleep(0.4)
                     continue
                 else:
-                    # All fallbacks exhausted
                     break
 
             text = force_single_sentence(raw)
