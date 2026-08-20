@@ -254,6 +254,7 @@ def build_messages(mode, comment_context="", short=False, recent=None):
 def force_single_sentence(text):
     if not text:
         return ""
+    
     # Remove thinking / reasoning blocks
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'</?think>', '', text, flags=re.IGNORECASE)
@@ -265,16 +266,7 @@ def force_single_sentence(text):
     text = re.sub(r'\s*\b(System|Assistant|Note|Explanation|I hope)\b.*', '', text, flags=re.I)
     text = re.sub(r'\?{2,}', '', text).strip()
 
-    # Get all complete sentences
-    sentences = re.findall(r'[^.!?]+[.!?]?', text)
-    sentences = [s.strip() for s in sentences if s.strip()]
-
-    if not sentences:
-        return text.strip().strip('"\'').strip()
-
-    # Prefer the longest sentence (usually the real reply)
-    text = max(sentences, key=lambda s: len(s.split()))
-
+    # Just clean quotes and whitespace — keep everything else
     return text.strip().strip('"\'').strip()
 
 def looks_like_assistant(s):
