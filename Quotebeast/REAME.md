@@ -43,11 +43,11 @@ $env:GROQ_API_KEY
 ```ps1
 $headers = @{ "Authorization" = "Bearer $env:GROQ_API_KEY" }
 
-Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" `
-                  -Headers $headers `
-                  -Method Get | 
-    Select-Object -ExpandProperty data | 
-    Select-Object id, created, owned_by | 
+Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" -Headers $headers -Method Get |
+    Select-Object -ExpandProperty data |
+    Where-Object { $_.id -notmatch 'whisper|orpheus|prompt-guard|safeguard' } |
+    Select-Object id, owned_by, created |
+    Sort-Object id |
     Format-Table -AutoSize
 ```
 
