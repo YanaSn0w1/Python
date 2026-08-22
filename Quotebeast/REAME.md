@@ -2,7 +2,19 @@
 
 A command-line tool that generates short, punchy one-liners using the Groq API (Llama 3.3 70B).
 
+## How It Works
+
+1. Reads the clipboard and sanitizes it into a clean context string.
+2. Builds a lean system + user prompt based on the selected mode.
+3. Calls Groq and Gemini API (primary: `gemini-3.5-flash-lite`, fallback: `qwen/qwen3.6-27b`).
+4. Validates the response — rejects anything too long, banned words, duplicates, or AI tells.
+5. Retries up to 12 times with increasing temperature if the output is rejected.
+6. Copies the final result to clipboard and saves it to history.
+7. Uses 2 of each key, 4 total, changes every time and uses Groq 2 times Gemini 1 time to avoid rate limit with free tier.
+
 Designed to be triggered with mouse hotkeys [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") 
+
+Also works in powershell.
 
 ---
 
@@ -91,15 +103,6 @@ Greeting shorthands are detected and handled:
 | `debug_last_run.txt` | Logs the mode, context, and clipboard from the most recent run. |
 
 ---
-
-## How It Works
-
-1. Reads the clipboard and sanitizes it into a clean context string.
-2. Builds a lean system + user prompt based on the selected mode.
-3. Calls the Groq API (primary: `llama-3.3-70b-versatile`, fallback: `llama-3.1-8b-instant`).
-4. Validates the response — rejects anything too long, banned words, duplicates, or AI tells.
-5. Retries up to 12 times with increasing temperature if the output is rejected.
-6. Copies the final result to clipboard and saves it to history.
 
 ## License
 MIT
