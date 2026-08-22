@@ -1,8 +1,10 @@
 ### [Quote_Beast.py](https://github.com/YanaSn0w1/Python/blob/main/Quotebeast/Quote_beast.py "Quote_Beast.py") 
 
-A command-line tool that generates short, punchy one-liners using the Groq API (Llama 3.3 70B).
+## A command-line tool that generates short, punchy one-liners.
 
-## How It Works
+## Use with mouse hotkeys [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") Or works in powershell.
+
+# How It Works
 
 1. Reads the clipboard and sanitizes it into a clean context string.
 2. Builds a lean system + user prompt based on the selected mode.
@@ -11,10 +13,6 @@ A command-line tool that generates short, punchy one-liners using the Groq API (
 5. Retries up to 12 times with increasing temperature if the output is rejected.
 6. Copies the final result to clipboard and saves it to history.
 7. Uses 2 of each key, 4 total, changes every time and uses Groq 2 times Gemini 1 time to avoid rate limit with free tier.
-
-Designed to be triggered with mouse hotkeys [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") 
-
-Also works in powershell.
 
 ---
 
