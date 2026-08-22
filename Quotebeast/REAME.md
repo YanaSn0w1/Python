@@ -23,7 +23,7 @@
 ```
 pip install requests
 ```
-- A Groq API key set as a Windows environment variable: `GROQ_API_KEY`
+- 4 API key set as Windows environment variable.
 
 ---
 
