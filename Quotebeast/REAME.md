@@ -19,87 +19,19 @@ pip install requests
 
 ## Setup
 
-1. Set your Gemini and Groq API key in powershell permanently.
+1. Set API keys in powershell (run as admin).
  ```ps1
    $env:GEMINI_API_KEY = "Your_API_Key_Here"
-   [Environment]::SetEnvironmentVariable("GEMINI_API_KEY", "Your_API_Key_Here", "User")
-   ```
- ```ps1
+   $env:GEMINI_API_KEY_2 = "Your_API_Key_Here"
    $env:GROQ_API_KEY = "Your_API_Key_Here"
+   $env:GROQ_API_KEY_2 = "Your_API_Key_Here"
+   [Environment]::SetEnvironmentVariable("GEMINI_API_KEY", "Your_API_Key_Here", "User")
+   [Environment]::SetEnvironmentVariable("GEMINI_API_KEY_2", "Your_API_Key_Here", "User")
    [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_API_Key_Here", "User")
+   [Environment]::SetEnvironmentVariable("GROQ_API_KEY_2", "Your_API_Key_Here", "User")
    ```
 
 2. Place `quote_beast.py` in the same folder as `quote_beast.ahk` then run `quote_beast.ahk` as administrator.
-
-3. Powershell Optional - Check if Groq models are online
-```ps1
-$headers = @{ "Authorization" = "Bearer $env:GROQ_API_KEY" }
-
-Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" -Headers $headers -Method Get |
-    Select-Object -ExpandProperty data |
-    Where-Object { $_.id -notmatch 'whisper|orpheus|prompt-guard|safeguard' } |
-    Select-Object id, owned_by, created |
-    Sort-Object id |
-    Format-Table -AutoSize
-```
-
-4. Powershell Optional - test every single model that appeared in your list.
-```ps1
-$headers = @{
-    "Authorization" = "Bearer $env:GROQ_API_KEY"
-    "Content-Type"  = "application/json"
-}
-
-$models = @(
-    "meta-llama/llama-prompt-guard-2-86m",
-    "openai/gpt-oss-safeguard-20b",
-    "groq/compound",
-    "groq/compound-mini",
-    "openai/gpt-oss-20b",
-    "meta-llama/llama-prompt-guard-2-22m",
-    "openai/gpt-oss-120b",
-    "canopylabs/orpheus-arabic-saudi",
-    "whisper-large-v3",
-    "qwen/qwen3.6-27b",
-    "canopylabs/orpheus-v1-english",
-    "whisper-large-v3-turbo",
-    "allam-2-7b"
-)
-
-foreach ($model in $models) {
-    Write-Host "`n----- Testing: $model -----" -ForegroundColor Cyan
-
-    $body = @{
-        model = $model
-        messages = @(
-            @{ role = "system"; content = "Write one short original sentence." }
-            @{ role = "user";   content = "React to this: Cute" }
-        )
-        temperature = 0.8
-        max_completion_tokens = 60
-    } | ConvertTo-Json -Depth 5
-
-    try {
-        $response = Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/chat/completions" `
-            -Method Post `
-            -Headers $headers `
-            -Body $body `
-            -ErrorAction Stop
-
-        $content = $response.choices[0].message.content
-        if ([string]::IsNullOrWhiteSpace($content)) {
-            Write-Host "EMPTY" -ForegroundColor Red
-        } else {
-            Write-Host $content -ForegroundColor Green
-        }
-    }
-    catch {
-        Write-Host "ERROR: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-```
-
----
 
 ## Powershell usage examples
 ```
