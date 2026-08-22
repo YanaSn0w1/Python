@@ -1,4 +1,4 @@
-### [Quote_Beast.py](https://github.com/YanaSn0w1/Python/blob/main/Quotebeast/Quote_beast.py "Quote_Beast.py") 
+# [Quote_Beast.py](https://github.com/YanaSn0w1/Python/blob/main/Quotebeast/Quote_beast.py "Quote_Beast.py") 
 
 ## A command-line tool that generates short, punchy one-liners.
 
