@@ -15,7 +15,7 @@
 3. Calls Groq and Gemini API (primary: `gemini-3.5-flash-lite`, fallback: `qwen/qwen3.6-27b`).
 4. Validates the response — rejects anything too long, banned words, duplicates, or AI tells.
 5. Copies the final result to clipboard and saves it to history.
-6. Uses 2 of each key, 4 total, changes every time and uses Groq 2 times Gemini 1 time to avoid rate limit with free tier.
+6. Uses 2 of each key, 4 total, uses Groq 2 times Gemini 1 time to avoid rate limit with free tier.
 
 ---
 
