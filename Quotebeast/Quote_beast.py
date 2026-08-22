@@ -13,42 +13,30 @@ import time
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-# ── API Keys ──────────────────────────────────────────────────────────────
-GEMINI_API_KEY   = os.getenv("GEMINI_API_KEY")
-GEMINI_API_KEY_2 = os.getenv("GEMINI_API_KEY_2")
-GROQ_API_KEY     = os.getenv("GROQ_API_KEY")
-GROQ_API_KEY_2   = os.getenv("GROQ_API_KEY_2")
+# ── API Keys (Groq only) ──────────────────────────────────────────────────
+GROQ_API_KEY   = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY_2 = os.getenv("GROQ_API_KEY_2")
+# Add more if you get a 3rd key:
+# GROQ_API_KEY_3 = os.getenv("GROQ_API_KEY_3")
 
-GEMINI_KEYS = [k for k in [GEMINI_API_KEY, GEMINI_API_KEY_2] if k]
-GROQ_KEYS   = [k for k in [GROQ_API_KEY, GROQ_API_KEY_2] if k]
+GROQ_KEYS = [k for k in [GROQ_API_KEY, GROQ_API_KEY_2] if k]
+# GROQ_KEYS = [k for k in [GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3] if k]
 
-if not GEMINI_KEYS and not GROQ_KEYS:
-    raise ValueError("No Gemini or Groq API keys found")
+if not GROQ_KEYS:
+    raise ValueError("No Groq API keys found")
 
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+MODEL = "qwen/qwen3.6-27b"
 
-MAIN_MODEL = "gemini-3.5-flash-lite"
-FALLBACK_MODELS = [
-    "qwen/qwen3.6-27b",
-]
-ALL_MODELS = [MAIN_MODEL] + FALLBACK_MODELS
-
-# ── Rotation settings ────────────────────────────────────────────────────
-GEMINI_USE = 1          # switch away from Gemini after this many successes
-GROQ_USE   = 2          # switch away from Qwen after this many successes
-KEY_SWAP   = True
-
-LAST_MODE_FILE = "last_mode.txt"
-LAST_AI_QUOTE_FILE = "last_ai_quotes.txt"
-PREFERRED_MODEL_FILE = "preferred_model.txt"
-GEMINI_USAGE_FILE = "gemini_usage.txt"
-GROQ_USAGE_FILE   = "groq_usage.txt"
-PREFERRED_GEMINI_KEY_FILE = "preferred_gemini_key.txt"
-PREFERRED_GROQ_KEY_FILE   = "preferred_groq_key.txt"
+# ── Settings ──────────────────────────────────────────────────────────────
+KEY_SWAP = True
 HISTORY_SIZE = 10
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 COLORS = {"header": "\033[96m", "text": "\033[97m", "reset": "\033[0m"}
+
+LAST_MODE_FILE = "last_mode.txt"
+LAST_AI_QUOTE_FILE = "last_ai_quotes.txt"
+PREFERRED_GROQ_KEY_FILE = "preferred_groq_key.txt"
 
 SINGLE_FALLBACK = "This is a fallback."
 
@@ -186,51 +174,16 @@ def save_last_ai_quote(text):
     except Exception:
         pass
 
-def get_preferred_model():
+def get_preferred_key_index():
     try:
-        with open(_path(PREFERRED_MODEL_FILE), "r", encoding="utf-8") as f:
-            m = f.read().strip()
-            if m in ALL_MODELS:
-                return m
-    except Exception:
-        pass
-    return MAIN_MODEL
-
-def save_preferred_model(model):
-    try:
-        with open(_path(PREFERRED_MODEL_FILE), "w", encoding="utf-8") as f:
-            f.write(model)
-    except Exception:
-        pass
-
-def get_model_usage(provider):
-    file = GEMINI_USAGE_FILE if provider == "gemini" else GROQ_USAGE_FILE
-    try:
-        with open(_path(file), "r", encoding="utf-8") as f:
+        with open(_path(PREFERRED_GROQ_KEY_FILE), "r", encoding="utf-8") as f:
             return int(f.read().strip() or 0)
     except Exception:
         return 0
 
-def save_model_usage(count, provider):
-    file = GEMINI_USAGE_FILE if provider == "gemini" else GROQ_USAGE_FILE
+def save_preferred_key_index(idx):
     try:
-        with open(_path(file), "w", encoding="utf-8") as f:
-            f.write(str(count))
-    except Exception:
-        pass
-
-def get_preferred_key_index(provider="gemini"):
-    file = PREFERRED_GEMINI_KEY_FILE if provider == "gemini" else PREFERRED_GROQ_KEY_FILE
-    try:
-        with open(_path(file), "r", encoding="utf-8") as f:
-            return int(f.read().strip() or 0)
-    except Exception:
-        return 0
-
-def save_preferred_key_index(idx, provider="gemini"):
-    file = PREFERRED_GEMINI_KEY_FILE if provider == "gemini" else PREFERRED_GROQ_KEY_FILE
-    try:
-        with open(_path(file), "w", encoding="utf-8") as f:
+        with open(_path(PREFERRED_GROQ_KEY_FILE), "w", encoding="utf-8") as f:
             f.write(str(idx))
     except Exception:
         pass
@@ -278,8 +231,17 @@ def strip_trailing_filler(text):
         text += '.'
     return text
 
-def get_fallback(mode=None, short=False):
-    return SINGLE_FALLBACK
+def write_debug(line):
+    try:
+        with open(_path("debug_api.txt"), "a", encoding="utf-8") as dbg:
+            dbg.write(line + "\n")
+        with open(_path("debug_api.txt"), "r", encoding="utf-8") as dbg:
+            lines = dbg.readlines()
+        if len(lines) > 300:
+            with open(_path("debug_api.txt"), "w", encoding="utf-8") as dbg:
+                dbg.writelines(lines[-300:])
+    except Exception:
+        pass
 
 
 def build_messages(mode, comment_context="", short=False, recent=None):
@@ -371,63 +333,6 @@ def looks_like_assistant(s):
         
     return False
 
-def write_debug(line):
-    try:
-        with open(_path("debug_api.txt"), "a", encoding="utf-8") as dbg:
-            dbg.write(line + "\n")
-        with open(_path("debug_api.txt"), "r", encoding="utf-8") as dbg:
-            lines = dbg.readlines()
-        if len(lines) > 300:
-            with open(_path("debug_api.txt"), "w", encoding="utf-8") as dbg:
-                dbg.writelines(lines[-300:])
-    except Exception:
-        pass
-
-
-def call_gemini(model, messages, temp, max_tokens, key):
-    contents = []
-    system_instruction = None
-    for msg in messages:
-        if msg["role"] == "system":
-            system_instruction = msg["content"]
-        else:
-            contents.append({"role": "user", "parts": [{"text": msg["content"]}]})
-
-    payload = {
-        "contents": contents,
-        "generationConfig": {
-            "temperature": temp,
-            "maxOutputTokens": max_tokens,
-            "topP": 0.9,
-        }
-    }
-    if system_instruction:
-        payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
-
-    url = GEMINI_URL.format(model=model) + f"?key={key}"
-    
-    try:
-        r = requests.post(url, json=payload, timeout=5)
-    except requests.exceptions.Timeout:
-        return None, "Timeout", 408
-    except Exception as e:
-        return None, str(e), 500
-
-    try:
-        data = r.json()
-    except Exception:
-        return None, "Invalid JSON from Gemini", r.status_code
-
-    if r.status_code != 200:
-        err = data.get("error", {}).get("message", str(data))
-        return None, err, r.status_code
-
-    try:
-        raw = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        return raw, "", 200
-    except Exception:
-        return None, "No content in Gemini response", 200
-
 
 def ai_line(mode, comment_context="", short=False):
     mode = (mode or "hot").strip().lower()
@@ -435,15 +340,7 @@ def ai_line(mode, comment_context="", short=False):
     min_words = 1 if short else 4
     recent = get_recent_quotes()
 
-    preferred = get_preferred_model()
-    models_to_try = [preferred] + [m for m in ALL_MODELS if m != preferred]
-    model_idx = 0
-
     for attempt in range(6):
-        model = models_to_try[model_idx % len(models_to_try)]
-        is_gemini = model.startswith("gemini")
-        provider = "gemini" if is_gemini else "groq"
-
         try:
             messages = build_messages(mode, comment_context, short, recent=recent)
             temp = min(0.65 + attempt * 0.08, 1.1)
@@ -453,85 +350,55 @@ def ai_line(mode, comment_context="", short=False):
             next_key_num = 0
             raw, err_msg, status = None, "", 0
 
-            if is_gemini:
-                keys = GEMINI_KEYS
-                if not keys:
-                    raw, err_msg, status = None, "No Gemini keys", 500
-                else:
-                    start_idx = get_preferred_key_index("gemini") % len(keys)
+            start_idx = get_preferred_key_index() % len(GROQ_KEYS)
 
-                    for offset in range(len(keys)):
-                        key_idx = (start_idx + offset) % len(keys)
-                        key = keys[key_idx]
-                        used_key_num = key_idx + 1
-                        next_key_num = (key_idx + 1) % len(keys) + 1
+            for offset in range(len(GROQ_KEYS)):
+                key_idx = (start_idx + offset) % len(GROQ_KEYS)
+                key = GROQ_KEYS[key_idx]
+                used_key_num = key_idx + 1
+                next_key_num = (key_idx + 1) % len(GROQ_KEYS) + 1
 
-                        raw, err_msg, status = call_gemini(model, messages, temp, max_tokens, key)
+                payload = {
+                    "model": MODEL,
+                    "messages": messages,
+                    "temperature": temp,
+                    "max_completion_tokens": max_tokens,
+                    "top_p": 0.9,
+                    "reasoning_effort": "none",
+                }
 
-                        if status in (429, 408, 500, 503) or status >= 400 or not raw:
-                            write_debug(f"  → Gemini key {used_key_num} failed ({status}), trying next")
-                            if status == 429:
-                                time.sleep(0.5)
-                            continue
-                        break
-                    else:
-                        raw, err_msg, status = None, "All Gemini keys failed", 500
+                try:
+                    r = requests.post(
+                        GROQ_URL,
+                        json=payload,
+                        headers={
+                            "Authorization": f"Bearer {key}",
+                            "Content-Type": "application/json"
+                        },
+                        timeout=5
+                    )
+                    resp_json = r.json()
+                    message = resp_json.get("choices", [{}])[0].get("message", {})
+                    raw = (message.get("content") or message.get("reasoning_content") or "").strip()
+                    err = resp_json.get("error", {}) or {}
+                    err_msg = err.get("message", "") if isinstance(err, dict) else str(err)
+                    status = r.status_code
+                except requests.exceptions.Timeout:
+                    raw, err_msg, status = None, "Timeout", 408
+                except Exception as e:
+                    raw, err_msg, status = None, str(e), 500
+
+                if status in (429, 408, 500, 503) or status >= 400 or not raw:
+                    write_debug(f"  → Groq key {used_key_num} failed ({status}), trying next")
+                    if status == 429:
+                        time.sleep(0.5)
+                    continue
+                break
             else:
-                keys = GROQ_KEYS
-                if not keys:
-                    raw, err_msg, status = None, "No Groq keys", 500
-                else:
-                    start_idx = get_preferred_key_index("groq") % len(keys)
-
-                    for offset in range(len(keys)):
-                        key_idx = (start_idx + offset) % len(keys)
-                        key = keys[key_idx]
-                        used_key_num = key_idx + 1
-                        next_key_num = (key_idx + 1) % len(keys) + 1
-
-                        payload = {
-                            "model": model,
-                            "messages": messages,
-                            "temperature": temp,
-                            "max_completion_tokens": max_tokens,
-                            "top_p": 0.9,
-                        }
-                        if "qwen" in model:
-                            payload["reasoning_effort"] = "none"
-
-                        try:
-                            r = requests.post(
-                                GROQ_URL,
-                                json=payload,
-                                headers={
-                                    "Authorization": f"Bearer {key}",
-                                    "Content-Type": "application/json"
-                                },
-                                timeout=5
-                            )
-                            resp_json = r.json()
-                            message = resp_json.get("choices", [{}])[0].get("message", {})
-                            raw = (message.get("content") or message.get("reasoning_content") or "").strip()
-                            err = resp_json.get("error", {}) or {}
-                            err_msg = err.get("message", "") if isinstance(err, dict) else str(err)
-                            status = r.status_code
-                        except requests.exceptions.Timeout:
-                            raw, err_msg, status = None, "Timeout", 408
-                        except Exception as e:
-                            raw, err_msg, status = None, str(e), 500
-
-                        if status in (429, 408, 500, 503) or status >= 400 or not raw:
-                            write_debug(f"  → Groq key {used_key_num} failed ({status}), trying next")
-                            if status == 429:
-                                time.sleep(0.5)
-                            continue
-                        break
-                    else:
-                        raw, err_msg, status = None, "All Groq keys failed", 500
+                raw, err_msg, status = None, "All Groq keys failed", 500
 
             if status == 429 or status >= 400 or not raw:
-                write_debug(f"attempt={attempt} key={used_key_num} model={model} status={status} FAILED")
-                model_idx += 1
+                write_debug(f"attempt={attempt} key={used_key_num} status={status} FAILED")
                 continue
 
             text = force_single_sentence(raw)
@@ -539,7 +406,7 @@ def ai_line(mode, comment_context="", short=False):
             text = strip_trailing_filler(text)
 
             if not text or looks_like_assistant(text):
-                write_debug(f"attempt={attempt} key={used_key_num} model={model} status={status} BAD TEXT")
+                write_debug(f"attempt={attempt} key={used_key_num} status={status} BAD TEXT")
                 continue
 
             words = len(text.split())
@@ -575,43 +442,25 @@ def ai_line(mode, comment_context="", short=False):
                 reasons.append("no end")
 
             if reasons:
-                write_debug(f"attempt={attempt} key={used_key_num} model={model} status={status} REJECTED ({', '.join(reasons)})")
+                write_debug(f"attempt={attempt} key={used_key_num} status={status} REJECTED ({', '.join(reasons)})")
                 continue
 
             # Success – rotate key
-            if KEY_SWAP and next_key_num:
-                if is_gemini:
-                    save_preferred_key_index(next_key_num - 1, "gemini")
-                else:
-                    save_preferred_key_index(next_key_num - 1, "groq")
+            if KEY_SWAP and len(GROQ_KEYS) > 1:
+                save_preferred_key_index(next_key_num - 1)
 
             # Compact success line
             ctx_display = (comment_context[:70] + '…') if comment_context and len(comment_context) > 70 else (comment_context or "")
             write_debug(
-                f"attempt={attempt} key={used_key_num} to_key={next_key_num} model={model} "
+                f"attempt={attempt} key={used_key_num} to_key={next_key_num} "
                 f"status={status} temp={temp:.2f} in={ctx_display!r} out={text!r}"
             )
-
-            # Correct per-provider model rotation
-            usage = get_model_usage(provider) + 1
-            limit = GEMINI_USE if is_gemini else GROQ_USE
-
-            if usage >= limit:
-                other_model = FALLBACK_MODELS[0] if is_gemini else MAIN_MODEL
-                save_preferred_model(other_model)
-                usage = 0
-                write_debug(f"  → {provider} limit reached, switching to {other_model}")
-            else:
-                save_preferred_model(model)
-
-            save_model_usage(usage, provider)
 
             return text
 
         except Exception as e:
-            write_debug(f"attempt={attempt} model={model} EXCEPTION={type(e).__name__}: {str(e)[:100]}")
+            write_debug(f"attempt={attempt} EXCEPTION={type(e).__name__}: {str(e)[:100]}")
             time.sleep(0.3)
-            model_idx += 1
 
     return SINGLE_FALLBACK
 
