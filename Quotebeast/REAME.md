@@ -2,7 +2,7 @@
 
 ### A command-line tool that generates short, punchy one-liners.
 
-### Use with mouse hotkeys [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") Or works in powershell.
+### Use with [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") ( mouse hotkeys) Or works in powershell.
 
 # How It Works
 
