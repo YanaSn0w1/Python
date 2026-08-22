@@ -4,6 +4,8 @@
 
 ### Use with [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") or powershell.
 
+---
+
 # How It Works
 
 1. Reads the clipboard and sanitizes it into a clean context string.
@@ -43,7 +45,9 @@ pip install requests
 
 2. Place `quote_beast.py` in the same folder as `quote_beast.ahk` then run `quote_beast.ahk` as administrator.
 
-## Powershell usage examples
+---
+
+# Powershell usage examples
 ```
 python quote_beast.py [options]
 ```
@@ -54,7 +58,9 @@ python quote_beast.py -m hot -n 5
 python quote_beast.py -m hot --infinite
 ```
 
-### Options
+---
+
+# Options
 
 | Flag | Description |
 |------|-------------|
@@ -65,7 +71,7 @@ python quote_beast.py -m hot --infinite
 
 ---
 
-## Modes
+# Modes
 
 | Mode | Style |
 |------|-------|
@@ -73,34 +79,9 @@ python quote_beast.py -m hot --infinite
 | `boost` | Grounded, practical motivation. No fluff or clichés. |
 | `flirt` | Matches the energy of whatever was copied — hype, warm, or witty. |
 | `stoic` | Calm, detached one-liners in the style of a stoic philosopher. |
-
----
-
-## Clipboard Context
-
-If you copy text (via the AHK hotkey) within 10 seconds before triggering generation, the script uses that text as context for the output. It sanitizes the clipboard content — stripping @mentions, URLs, and Twitter shorthand (GM, GN, etc.) — before sending it to the model.
-
-Greeting shorthands are detected and handled:
-
-| Shorthand | Expands to |
-|-----------|------------|
-| GM | Good Morning |
-| GA | Good Afternoon |
-| GE | Good Evening |
-| GN | Good Night |
-
----
-
-## Files
-
-| File | Purpose |
-|------|---------|
-| `last_mode.txt` | Persists the last used mode across runs. |
-| `last_ai_quotes.txt` | Stores the last 10 generated lines to avoid repetition. |
-| `debug_api.txt` | Logs every API attempt and rejection reason. |
 | `debug_last_run.txt` | Logs the mode, context, and clipboard from the most recent run. |
 
 ---
 
-## License
+# License
 MIT
