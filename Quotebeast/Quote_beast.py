@@ -13,12 +13,17 @@ import time
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GROQ_API_KEY   = os.getenv("GROQ_API_KEY")
+# ── API Keys ──────────────────────────────────────────────────────────────
+GEMINI_API_KEY   = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY_2 = os.getenv("GEMINI_API_KEY_2")
+GROQ_API_KEY     = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY_2   = os.getenv("GROQ_API_KEY_2")
 
-# Only require a key if we actually need it
-if not GEMINI_API_KEY and not GROQ_API_KEY:
-    raise ValueError("Neither GEMINI_API_KEY nor GROQ_API_KEY is set")
+GEMINI_KEYS = [k for k in [GEMINI_API_KEY, GEMINI_API_KEY_2] if k]
+GROQ_KEYS   = [k for k in [GROQ_API_KEY, GROQ_API_KEY_2] if k]
+
+if not GEMINI_KEYS and not GROQ_KEYS:
+    raise ValueError("No Gemini or Groq API keys found")
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
@@ -29,14 +34,18 @@ FALLBACK_MODELS = [
 ]
 ALL_MODELS = [MAIN_MODEL] + FALLBACK_MODELS
 
-# ── Model rotation settings ──────────────────────────────────────────────
-MODEL_SWAP = True          # True = force switch after MODEL_USE successful uses
-MODEL_USE  = 1             # number of successful uses before forced swap
+# ── Rotation settings ────────────────────────────────────────────────────
+GEMINI_USE = 1          # switch away from Gemini after this many successes
+GROQ_USE   = 2          # switch away from Qwen after this many successes
+KEY_SWAP   = True
 
 LAST_MODE_FILE = "last_mode.txt"
 LAST_AI_QUOTE_FILE = "last_ai_quotes.txt"
 PREFERRED_MODEL_FILE = "preferred_model.txt"
-MODEL_USAGE_FILE = "model_usage.txt"
+GEMINI_USAGE_FILE = "gemini_usage.txt"
+GROQ_USAGE_FILE   = "groq_usage.txt"
+PREFERRED_GEMINI_KEY_FILE = "preferred_gemini_key.txt"
+PREFERRED_GROQ_KEY_FILE   = "preferred_groq_key.txt"
 HISTORY_SIZE = 10
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 COLORS = {"header": "\033[96m", "text": "\033[97m", "reset": "\033[0m"}
@@ -194,17 +203,35 @@ def save_preferred_model(model):
     except Exception:
         pass
 
-def get_model_usage():
+def get_model_usage(provider):
+    file = GEMINI_USAGE_FILE if provider == "gemini" else GROQ_USAGE_FILE
     try:
-        with open(_path(MODEL_USAGE_FILE), "r", encoding="utf-8") as f:
+        with open(_path(file), "r", encoding="utf-8") as f:
             return int(f.read().strip() or 0)
     except Exception:
         return 0
 
-def save_model_usage(count):
+def save_model_usage(count, provider):
+    file = GEMINI_USAGE_FILE if provider == "gemini" else GROQ_USAGE_FILE
     try:
-        with open(_path(MODEL_USAGE_FILE), "w", encoding="utf-8") as f:
+        with open(_path(file), "w", encoding="utf-8") as f:
             f.write(str(count))
+    except Exception:
+        pass
+
+def get_preferred_key_index(provider="gemini"):
+    file = PREFERRED_GEMINI_KEY_FILE if provider == "gemini" else PREFERRED_GROQ_KEY_FILE
+    try:
+        with open(_path(file), "r", encoding="utf-8") as f:
+            return int(f.read().strip() or 0)
+    except Exception:
+        return 0
+
+def save_preferred_key_index(idx, provider="gemini"):
+    file = PREFERRED_GEMINI_KEY_FILE if provider == "gemini" else PREFERRED_GROQ_KEY_FILE
+    try:
+        with open(_path(file), "w", encoding="utf-8") as f:
+            f.write(str(idx))
     except Exception:
         pass
 
@@ -226,14 +253,13 @@ TRAILING_FILLER = re.compile(
     r'sometimes|right here|at all|though|actually|literally|basically|'
     r'honestly|truly|really|definitely|absolutely|totally|completely|'
     r'certainly|clearly|obviously|simply|just|even|still|yet|then|'
-    r'there|here|ever|never|always|often|soon|perhaps|maybe)[.!?]?$',
+    r'ever|never|always|often|soon|perhaps|maybe)[.!?]?$',
     re.IGNORECASE
 )
 
-# Accept real emoji or common text smileys as valid endings
 EMOJI_OR_SMILEY = re.compile(
-    r'[\U0001F300-\U0001F9FF\u2600-\u27BF]$|'   # broad emoji ranges
-    r'[:;]-?[)D]$'                              # :) ;) :D etc.
+    r'[\U0001F300-\U0001F9FF\u2600-\u27BF]$|'
+    r'[:;]-?[)D]$'
 )
 
 def strip_trailing_filler(text):
@@ -243,8 +269,13 @@ def strip_trailing_filler(text):
             break
         text = cleaned
 
-    # Just clean accidental "something."  – never force a period
     text = re.sub(r'([^\w\s])\.$', r'\1', text)
+
+    if text and not (
+        text.endswith(('.', '!', '?'))
+        or bool(EMOJI_OR_SMILEY.search(text))
+    ):
+        text += '.'
     return text
 
 def get_fallback(mode=None, short=False):
@@ -322,9 +353,23 @@ def force_single_sentence(text):
 def looks_like_assistant(s):
     if not s:
         return True
+    s_lower = s.lower().strip()
+    
     bad = ["i'm here to help", "as an ai", "as an assistant", "i can help",
            "let me know", "system:", "assistant:", "here's a thinking", "thinking process"]
-    return any(p in s.lower() for p in bad)
+    if any(p in s_lower for p in bad):
+        return True
+    
+    if len(s) < 8:
+        return True
+    if s.startswith(('(', '[', '{', '"', "'")) and len(s) < 20:
+        return True
+    if re.match(r'^[\W\d_]+$', s):
+        return True
+    if s.count('(') != s.count(')'):
+        return True
+        
+    return False
 
 def write_debug(line):
     try:
@@ -332,18 +377,14 @@ def write_debug(line):
             dbg.write(line + "\n")
         with open(_path("debug_api.txt"), "r", encoding="utf-8") as dbg:
             lines = dbg.readlines()
-        if len(lines) > 50:
+        if len(lines) > 300:
             with open(_path("debug_api.txt"), "w", encoding="utf-8") as dbg:
-                dbg.writelines(lines[-50:])
+                dbg.writelines(lines[-300:])
     except Exception:
         pass
 
 
-def call_gemini(model, messages, temp, max_tokens):
-    if not GEMINI_API_KEY:
-        return None, "GEMINI_API_KEY not set", 400
-
-    # Convert OpenAI-style messages to Gemini format
+def call_gemini(model, messages, temp, max_tokens, key):
     contents = []
     system_instruction = None
     for msg in messages:
@@ -363,9 +404,15 @@ def call_gemini(model, messages, temp, max_tokens):
     if system_instruction:
         payload["systemInstruction"] = {"parts": [{"text": system_instruction}]}
 
-    url = GEMINI_URL.format(model=model) + f"?key={GEMINI_API_KEY}"
-    r = requests.post(url, json=payload, timeout=30)
+    url = GEMINI_URL.format(model=model) + f"?key={key}"
     
+    try:
+        r = requests.post(url, json=payload, timeout=5)
+    except requests.exceptions.Timeout:
+        return None, "Timeout", 408
+    except Exception as e:
+        return None, str(e), 500
+
     try:
         data = r.json()
     except Exception:
@@ -395,66 +442,108 @@ def ai_line(mode, comment_context="", short=False):
     for attempt in range(6):
         model = models_to_try[model_idx % len(models_to_try)]
         is_gemini = model.startswith("gemini")
+        provider = "gemini" if is_gemini else "groq"
 
         try:
             messages = build_messages(mode, comment_context, short, recent=recent)
             temp = min(0.65 + attempt * 0.08, 1.1)
             max_tokens = 50 if short else 60
 
+            used_key_num = 0
+            next_key_num = 0
+            raw, err_msg, status = None, "", 0
+
             if is_gemini:
-                raw, err_msg, status = call_gemini(model, messages, temp, max_tokens)
+                keys = GEMINI_KEYS
+                if not keys:
+                    raw, err_msg, status = None, "No Gemini keys", 500
+                else:
+                    start_idx = get_preferred_key_index("gemini") % len(keys)
+
+                    for offset in range(len(keys)):
+                        key_idx = (start_idx + offset) % len(keys)
+                        key = keys[key_idx]
+                        used_key_num = key_idx + 1
+                        next_key_num = (key_idx + 1) % len(keys) + 1
+
+                        raw, err_msg, status = call_gemini(model, messages, temp, max_tokens, key)
+
+                        if status in (429, 408, 500, 503) or status >= 400 or not raw:
+                            write_debug(f"  → Gemini key {used_key_num} failed ({status}), trying next")
+                            if status == 429:
+                                time.sleep(0.5)
+                            continue
+                        break
+                    else:
+                        raw, err_msg, status = None, "All Gemini keys failed", 500
             else:
-                payload = {
-                    "model": model,
-                    "messages": messages,
-                    "temperature": temp,
-                    "max_completion_tokens": max_tokens,
-                    "top_p": 0.9,
-                }
-                if "qwen" in model:
-                    payload["reasoning_effort"] = "none"
+                keys = GROQ_KEYS
+                if not keys:
+                    raw, err_msg, status = None, "No Groq keys", 500
+                else:
+                    start_idx = get_preferred_key_index("groq") % len(keys)
 
-                r = requests.post(
-                    GROQ_URL,
-                    json=payload,
-                    headers={
-                        "Authorization": f"Bearer {GROQ_API_KEY}",
-                        "Content-Type": "application/json"
-                    },
-                    timeout=30
-                )
-                resp_json = r.json()
-                message = resp_json.get("choices", [{}])[0].get("message", {})
-                raw = (message.get("content") or message.get("reasoning_content") or "").strip()
-                err = resp_json.get("error", {}) or {}
-                err_msg = err.get("message", "") if isinstance(err, dict) else str(err)
-                status = r.status_code
+                    for offset in range(len(keys)):
+                        key_idx = (start_idx + offset) % len(keys)
+                        key = keys[key_idx]
+                        used_key_num = key_idx + 1
+                        next_key_num = (key_idx + 1) % len(keys) + 1
 
-            write_debug(
-                f"attempt={attempt} model={model} status={status} "
-                f"temp={temp:.2f} err={repr(err_msg)[:120]} raw={repr((raw or '')[:200])}"
-            )
+                        payload = {
+                            "model": model,
+                            "messages": messages,
+                            "temperature": temp,
+                            "max_completion_tokens": max_tokens,
+                            "top_p": 0.9,
+                        }
+                        if "qwen" in model:
+                            payload["reasoning_effort"] = "none"
 
-            # Real API failure → switch model (rate-limit / error path – kept as-is)
+                        try:
+                            r = requests.post(
+                                GROQ_URL,
+                                json=payload,
+                                headers={
+                                    "Authorization": f"Bearer {key}",
+                                    "Content-Type": "application/json"
+                                },
+                                timeout=5
+                            )
+                            resp_json = r.json()
+                            message = resp_json.get("choices", [{}])[0].get("message", {})
+                            raw = (message.get("content") or message.get("reasoning_content") or "").strip()
+                            err = resp_json.get("error", {}) or {}
+                            err_msg = err.get("message", "") if isinstance(err, dict) else str(err)
+                            status = r.status_code
+                        except requests.exceptions.Timeout:
+                            raw, err_msg, status = None, "Timeout", 408
+                        except Exception as e:
+                            raw, err_msg, status = None, str(e), 500
+
+                        if status in (429, 408, 500, 503) or status >= 400 or not raw:
+                            write_debug(f"  → Groq key {used_key_num} failed ({status}), trying next")
+                            if status == 429:
+                                time.sleep(0.5)
+                            continue
+                        break
+                    else:
+                        raw, err_msg, status = None, "All Groq keys failed", 500
+
             if status == 429 or status >= 400 or not raw:
-                write_debug(f"  → switching model (real error)")
-                if status == 429:
-                    time.sleep(1.0)
+                write_debug(f"attempt={attempt} key={used_key_num} model={model} status={status} FAILED")
                 model_idx += 1
                 continue
 
-            # Success path (content validation)
             text = force_single_sentence(raw)
             text = clean_text(text)
             text = strip_trailing_filler(text)
 
             if not text or looks_like_assistant(text):
-                write_debug(f"  → bad text / assistant-like, retry same model")
+                write_debug(f"attempt={attempt} key={used_key_num} model={model} status={status} BAD TEXT")
                 continue
 
             words = len(text.split())
 
-            # ── Smarter duplicate check (only last 3 quotes + 5-word fingerprint) ──
             recent_for_dup = recent[-3:] if recent else []
             fingerprint = ' '.join(text.lower().split()[:5])
             recent_fingerprints = [' '.join(q.lower().split()[:5]) for q in recent_for_dup]
@@ -470,48 +559,59 @@ def ai_line(mode, comment_context="", short=False):
                 or any(p in text_lower for p in BANNED_PHRASES)
             )
 
-            # Accept . ! ?  OR  emoji  OR  text smiley
             ends_ok = (
                 text.endswith(('.', '!', '?'))
                 or bool(EMOJI_OR_SMILEY.search(text))
             )
 
-            # Build human-readable rejection reasons
             reasons = []
             if not (min_words <= words <= max_words):
-                reasons.append(f"{words}w (need {min_words}-{max_words})")
+                reasons.append(f"{words}w")
             if is_dup:
                 reasons.append("dup")
             if has_blocked:
                 reasons.append("blocked")
             if not ends_ok:
-                reasons.append("no end punct")
+                reasons.append("no end")
 
-            if not reasons:                       # everything passed
+            if reasons:
+                write_debug(f"attempt={attempt} key={used_key_num} model={model} status={status} REJECTED ({', '.join(reasons)})")
+                continue
+
+            # Success – rotate key
+            if KEY_SWAP and next_key_num:
+                if is_gemini:
+                    save_preferred_key_index(next_key_num - 1, "gemini")
+                else:
+                    save_preferred_key_index(next_key_num - 1, "groq")
+
+            # Compact success line
+            ctx_display = (comment_context[:70] + '…') if comment_context and len(comment_context) > 70 else (comment_context or "")
+            write_debug(
+                f"attempt={attempt} key={used_key_num} to_key={next_key_num} model={model} "
+                f"status={status} temp={temp:.2f} in={ctx_display!r} out={text!r}"
+            )
+
+            # Correct per-provider model rotation
+            usage = get_model_usage(provider) + 1
+            limit = GEMINI_USE if is_gemini else GROQ_USE
+
+            if usage >= limit:
+                other_model = FALLBACK_MODELS[0] if is_gemini else MAIN_MODEL
+                save_preferred_model(other_model)
+                usage = 0
+                write_debug(f"  → {provider} limit reached, switching to {other_model}")
+            else:
                 save_preferred_model(model)
 
-                write_debug(f"  ✓ ACCEPTED → {text}")
+            save_model_usage(usage, provider)
 
-                # ── Forced rotation after N successful uses (shown AFTER accepted) ──
-                if MODEL_SWAP:
-                    usage = get_model_usage() + 1
-                    if usage >= MODEL_USE:
-                        current_idx = ALL_MODELS.index(model) if model in ALL_MODELS else 0
-                        next_model = ALL_MODELS[(current_idx + 1) % len(ALL_MODELS)]
-                        save_preferred_model(next_model)
-                        usage = 0
-                        write_debug(f"  → forced model swap after {MODEL_USE} uses → {next_model}")
-                    save_model_usage(usage)
-
-                return text
-
-            # Quality rejection → stay on same model, just higher temp next time
-            write_debug(f"  ✗ REJECTED ({', '.join(reasons)}) → {text[:60]}")
+            return text
 
         except Exception as e:
-            write_debug(f"attempt={attempt} EXCEPTION={repr(str(e))}")
+            write_debug(f"attempt={attempt} model={model} EXCEPTION={type(e).__name__}: {str(e)[:100]}")
             time.sleep(0.3)
-            model_idx += 1          # treat exceptions as real errors
+            model_idx += 1
 
     return SINGLE_FALLBACK
 
@@ -546,9 +646,6 @@ def main():
         comment_context = ""
     else:
         comment_context = sanitize_context(clipboard_text)
-
-    # Log the sanitized version (what actually goes to the model)
-    write_debug(f"CONTEXT={comment_context!r}")
 
     if comment_context:
         print(f"{COLORS['header']}Context: \"{comment_context[:60]}\"{COLORS['reset']}\n")
