@@ -14,9 +14,8 @@
 2. Builds a lean system + user prompt based on the selected mode.
 3. Validates the response — rejects anything too long, banned words, duplicates, or AI tells.
 4. Copies the final result to clipboard and saves it to history.
-5. Calls Groqi API (model: `qwen/qwen3.6-27b`).
-6. Uses 2 Groq API keys to avoid rate limit on free tier.
-7. Limit for `qwen/qwen3.6-27b` per key: RPM 30, RPD 1000, TPM 8k, TPD 200k.
+5. Uses 2 Groq API keys to avoid rate limit on free tier.
+6. Limit for `qwen/qwen3.6-27b` per key: RPM 30, RPD 1000, TPM 8k, TPD 200k.
 
 ---
 
@@ -35,12 +34,8 @@ pip install requests
 
 1. Set API keys in powershell (run as admin).
  ```ps1
-   $env:GEMINI_API_KEY = "Your_API_Key_Here"
-   $env:GEMINI_API_KEY_2 = "Your_API_Key_Here"
    $env:GROQ_API_KEY = "Your_API_Key_Here"
    $env:GROQ_API_KEY_2 = "Your_API_Key_Here"
-   [Environment]::SetEnvironmentVariable("GEMINI_API_KEY", "Your_API_Key_Here", "User")
-   [Environment]::SetEnvironmentVariable("GEMINI_API_KEY_2", "Your_API_Key_Here", "User")
    [Environment]::SetEnvironmentVariable("GROQ_API_KEY", "Your_API_Key_Here", "User")
    [Environment]::SetEnvironmentVariable("GROQ_API_KEY_2", "Your_API_Key_Here", "User")
    ```
