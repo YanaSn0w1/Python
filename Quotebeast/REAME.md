@@ -1,8 +1,6 @@
 # [Quote_Beast.py](https://github.com/YanaSn0w1/Python/blob/main/Quotebeast/Quote_beast.py "Quote_Beast.py") 
 
-### A command-line tool that generates short, punchy one-liners.
-
-### Use with [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") or powershell.
+### Generates short, punchy one-liners. Use with [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") or powershell.
 
 ---
 
