@@ -12,10 +12,11 @@
 
 1. Reads the clipboard and sanitizes it into a clean context string.
 2. Builds a lean system + user prompt based on the selected mode.
-3. Calls Groq and Gemini API (primary: `gemini-3.5-flash-lite`, fallback: `qwen/qwen3.6-27b`).
-4. Validates the response — rejects anything too long, banned words, duplicates, or AI tells.
-5. Copies the final result to clipboard and saves it to history.
-6. Uses 2 of each key, 4 total, uses Groq 2 times Gemini 1 time to avoid rate limit with free tier.
+3. Validates the response — rejects anything too long, banned words, duplicates, or AI tells.
+4. Copies the final result to clipboard and saves it to history.
+5. Calls Groqi API (model: `qwen/qwen3.6-27b`).
+6. Uses 2 Groq API keys to avoid rate limit on free tier.
+7. Limit for 'qwen/qwen3.6-27b' per key: Requests per minute 30, Requests per day 1000, Tokens per minute 8k, Tokens per day 200k
 
 ---
 
