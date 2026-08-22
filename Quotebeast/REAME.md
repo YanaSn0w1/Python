@@ -16,7 +16,7 @@
 4. Copies the final result to clipboard and saves it to history.
 5. Calls Groqi API (model: `qwen/qwen3.6-27b`).
 6. Uses 2 Groq API keys to avoid rate limit on free tier.
-7. Limit for `qwen/qwen3.6-27b` per key: Requests per minute 30, Requests per day 1000, Tokens per minute 8k, Tokens per day 200k
+7. Limit for `qwen/qwen3.6-27b` per key: RPM 30, RPD 1000, TPM 8k, TPD 200k.
 
 ---
 
