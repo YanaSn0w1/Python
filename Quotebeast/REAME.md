@@ -6,6 +6,8 @@
 
 ### Generates short, punchy one-liners. Use with [Quote_beast.ahk](https://github.com/YanaSn0w1/AutoHotkey#quote_beastahk-%EF%B8%8F "Quote_beast.ahk") or powershell.
 
+Android version is here: [Quote_beast for Android](https://github.com/YanaSn0w1/QuoteBeast/blob/main/README.md#quote-beast "Quote_beast for Android") ⬅️
+
 ---
 
 # How It Works
