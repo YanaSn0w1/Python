@@ -26,7 +26,7 @@
 ```
 pip install requests
 ```
-- 4 API key set as Windows environment variable.
+- 2 API key set as Windows environment variable.
 
 ---
 
