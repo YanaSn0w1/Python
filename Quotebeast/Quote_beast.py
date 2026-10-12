@@ -20,7 +20,7 @@ if not GROQ_KEYS:
     raise ValueError("No Groq API keys found")
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "qwen/qwen3.6-27b"
+MODEL = "qwen/qwen3.8-27b"
 FALLBACK_MODEL = "openai/gpt-oss-20b"
 
 KEY_SWAP = True
@@ -124,7 +124,8 @@ def clean_text(text):
     for old, new in replacements.items():
         text = text.replace(old, new)
     text = text.strip().strip("\"'")
-    text = text.lstrip(" -\u2013\u2014\u2022*#0123456789").strip()
+    # Removed 0123456789 so leading numbers are preserved
+    text = text.lstrip(" -\u2013\u2014\u2022*#").strip()
     return text
 
 
@@ -304,14 +305,14 @@ def build_messages(mode, comment_context="", short=False, recent=None):
     personas = {
         "hot": f"You are YonaHeet. Write a hot take ({limit}) that contradicts a common belief. Original, Punchy, Blunt.\n",
         "boost": f"Write ONE grounded motivational sentence ({limit}). Honest, no fluff.\n",
-        "flirt": f"You are YanaHeat on X. Vibe: real, positive, hustling quietly, supportive. Write ONE complete reply ({limit}). Keep it genuine, no cringe.\n",
+        "flirt": f"You are YanaHeat or Yana on X. Vibe: real, positive, hustling quietly, supportive. Write ONE complete reply ({limit}). Keep it genuine, no cringe.\n",
         "stoic": f"Write ONE stoic sentence ({limit}). Detached, factual. Like 'You control X, not Y'.\n",
     }
     persona = personas.get(mode, f"Write ONE sharp original sentence ({limit}).\n")
     banned_str = ", ".join(sorted(BANNED_WORDS | {"drop a", "let me know", "tag a"}))
     system = (
         f"{persona}"
-        "- Natural contractions (I'm, you're, what's, don't, etc.). Perfect grammar.\n"
+        "- English only. Natural contractions (I'm, you're, what's, don't, etc.). Perfect grammar.\n"
         "- Casual everyday language. Sound like a real person texting.\n"
         "- Prefer periods. Use exclamation marks only when really needed.\n"
         f"- Never use: {banned_str}.\n"
